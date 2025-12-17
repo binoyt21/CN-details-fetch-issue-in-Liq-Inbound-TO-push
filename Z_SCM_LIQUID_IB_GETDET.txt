@@ -1,0 +1,2489 @@
+FUNCTION Z_SCM_LIQUID_IB_GETDET
+  IMPORTING
+    I_TKNUM TYPE ZSCE_TKNUM_RANGE_TT OPTIONAL
+    I_DISPT_DT TYPE ZSCE_DATBG_RANGE_TT
+    I_TPLST TYPE ZSCE_TPLST_RANGE_TT OPTIONAL
+  EXPORTING
+    ET_LIB_HEADER_DATA TYPE ZSCE_ORDER_HDR_DATA_T
+    ET_LIB_CN_DATA TYPE ZSCE_CN_DATA_T
+    ET_LIB_CUST_DOC_DATA TYPE ZSCE_CUST_DOC_DATA_T.
+
+
+
+* Create Date         : 30.04.2020
+* Release             : 1.0
+* Technical Author    : Eswara Reddy
+* Functional Author   : Minal Tike
+*----------------------------------------------------------------------*
+* Description  : FM to fetch a details for liquid Inbound
+*----------------------------------------------------------------------*
+* CHANGE HISTORY
+*----------------------------------------------------------------------*
+*SrNo| Date      | User ID |  Description  |  Change Label   |
+*----------------------------------------------------------------------*
+* 1  |           |         |               |                 |
+*----------------------------------------------------------------------*
+
+
+  TYPES : BEGIN OF lty_oigs,
+          shnumber     TYPE oig_shnum,
+          shtype       TYPE oig_tdstyp,
+          wgt_uom      TYPE oig_wgtuom,
+          vsart        TYPE vsarttr,
+          tplst        TYPE tplst,
+          route        TYPE route,
+          cre_date     TYPE erdat,
+          oig_sstsf    TYPE oig_sstsf, " eswara
+          sched_stdt   TYPE oig_shstdt,
+          sched_sttm   TYPE oig_shsttm,
+          load_stdt    TYPE oig_ldstdt,
+          load_sttm    TYPE oig_ldsttm,
+          load_stdta   TYPE oig_ldstda,
+          load_sttma   TYPE oig_ldstta,
+          load_eddta   TYPE oig_ldedda,
+          load_edtma   TYPE oig_ldedta,
+          del_stdta    TYPE oig_destda,
+          del_sttma    TYPE oig_destta,
+          lr_no        TYPE ylrno,
+          lr_dt        TYPE datum,
+          lr_qty       TYPE zfkimg_stl,
+          zzserv_plant TYPE zserv_plant,
+          END OF lty_oigs.
+
+  TYPES :  BEGIN OF lty_yttstx0002,
+          report_no  TYPE yreport_no,
+          shnumber   TYPE oig_shnum,
+          dlvry_qty1 TYPE yig_cmpqua,
+          desp_uom   TYPE oig_meabm,
+          lr_no      TYPE ylrno,
+          lr_dt      TYPE datum,
+          delivery   TYPE yttstx0002-delivery,
+   END OF lty_yttstx0002.
+
+  TYPES :   BEGIN OF lty_yttstx0001,
+          report_no  TYPE yreport_no,
+          shnumber   TYPE oig_shnum,
+          trk_purpos TYPE ytrk_purps,
+          function   TYPE ystats,
+          licno      TYPE ylicno,
+    END OF lty_yttstx0001.
+
+
+  TYPES: BEGIN OF lty_zlog_exec_var,
+          name        TYPE zlog_exec_var-name,
+          shtyp       TYPE zlog_exec_var-shtyp,
+          shtype      TYPE zlog_exec_var-shtype,
+          active      TYPE zlog_exec_var-active,
+          remarks     TYPE zlog_exec_var-remarks,
+          transplpt   TYPE zlog_exec_var-transplpt,
+          spart       TYPE zlog_exec_var-spart,
+          rfcdest     TYPE rfcdest,
+          ewb_uom_d   TYPE txt30,
+          zzpmatkl1   TYPE matkl,
+          END OF     lty_zlog_exec_var .
+
+
+  TYPES: BEGIN OF lty_oigsi,
+            shnumber   TYPE oig_shnum,
+            shitem     TYPE oig_shitm,
+            doc_typ    TYPE vbtyp,
+            vgtyp      TYPE vbtyp,
+            doc_number TYPE oig_docnr,
+         END OF lty_oigsi.
+
+  TYPES:  BEGIN OF lty_ylicm,
+            licno  TYPE ylicno,
+            state  TYPE z_state,
+            name   TYPE z_name2,
+            vlddt  TYPE aktbd,
+           END OF lty_ylicm.
+
+  TYPES:BEGIN OF lty_lips,
+   vbeln TYPE vbeln_vl,
+   posnr TYPE posnr_vl,
+   matnr TYPE matnr,
+   matkl TYPE matkl,
+   lfimg TYPE lfimg,
+   meins TYPE meins,
+   vrkme TYPE vrkme,
+   arktx TYPE arktx,
+   mfrgr TYPE mfrgr,
+   werks TYPE werks_d,
+   vgbel TYPE vgbel,
+   vgpos TYPE vgpos,
+   vtweg TYPE vtweg,
+   spart TYPE spart,
+   vgtyp TYPE vgtyp,
+  END OF lty_lips.
+
+  TYPES:BEGIN OF lty_oigss,
+         shnumber TYPE oig_shnum,
+         distz    TYPE distz,
+         medst    TYPE medst,
+         knota    TYPE knota,
+         knotz    TYPE knotz,
+        END OF lty_oigss.
+
+  TYPES :  BEGIN OF lty_vbak,
+            vbeln    TYPE vbeln_va,
+            bukrs_vf TYPE bukrs_vf,
+            zzwerk   TYPE zwerk,
+           END OF lty_vbak.
+
+
+  TYPES:BEGIN OF lty_t001w,
+        werks TYPE werks_d,
+        name1 TYPE name1,
+        adrnr TYPE adrnr,
+       END OF lty_t001w.
+
+  TYPES: BEGIN OF lty_adrc,
+          addrnumber TYPE adrc-addrnumber,
+          post_code1 TYPE adrc-post_code1,
+          transpzone TYPE adrc-transpzone,
+          region     TYPE adrc-region,
+        END OF lty_adrc.
+
+  TYPES: BEGIN OF lty_likp,
+          vbeln  TYPE vbeln_vl,
+          btgew  TYPE gsgew,
+          ntgew  TYPE ntgew_15,
+          gewei  TYPE gewei,
+          kunnr  TYPE kunwe,
+          route  TYPE route,
+        END OF lty_likp.
+
+  TYPES:  BEGIN OF lty_kna1,
+          kunnr TYPE kna1-kunnr,
+          name1 TYPE kna1-name1,
+          adrnr TYPE kna1-adrnr,
+         END OF lty_kna1.
+
+  TYPES : BEGIN OF lty_route,
+            route TYPE route_vl,
+          END OF lty_route.
+
+  TYPES : BEGIN OF lty_trolz,
+          route TYPE route_vl,
+          azone TYPE azone,
+          lzone TYPE lzone,
+         END OF lty_trolz.
+
+  TYPES:   BEGIN OF lty_oigsv,
+            shnumber   TYPE oig_shnum,
+            vehicle TYPE oig_vhlnmr,
+            veh_type   TYPE oig_vhltyp,
+            veh_id     TYPE oig_vehid,
+            carrier    TYPE oig_lifnr,
+            vol_uom    TYPE oig_voluom,
+            veh_maxvol TYPE oig_vehmvl,
+            route      TYPE oig_routev,
+            cap_uom    TYPE oig_cap_uom,
+            shift      TYPE  oig_shift,
+         END OF   lty_oigsv.
+
+  TYPES : BEGIN OF lty_tvrab,
+            route TYPE route,
+            knanf TYPE knota,
+            knend TYPE knotz,
+            sdabw TYPE sdabw,
+        END OF lty_tvrab.
+
+  TYPES :  BEGIN OF lty_zlrpo,
+           lr_no      TYPE ylrno,
+           shnumber   TYPE oig_shnum,
+           created_on TYPE erdat,
+           END OF lty_zlrpo.
+
+  TYPES : BEGIN OF gty_ekko,
+            ebeln  TYPE ebeln,
+            bukrs  TYPE bukrs,
+            lifnr  TYPE elifn,
+            reswk  TYPE reswk,
+            inco1  TYPE inco1,
+            knumv  TYPE knumv,
+         END OF gty_ekko.
+
+  TYPES : BEGIN OF gty_ekpo,
+            ebeln TYPE ebeln,
+            ebelp TYPE ebelp,
+            werks TYPE ewerk,
+            lgort	TYPE lgort_d,
+            menge TYPE bstmg,
+            meins TYPE bstme , " eswara
+            berid	TYPE berid,
+            reslo	TYPE reslo,
+            oic_pbatch TYPE	oic_pbatch,
+         END OF gty_ekpo.
+
+  TYPES :  BEGIN OF lty_mara,
+             matnr TYPE matnr,
+             matkl TYPE matkl,
+             spart TYPE spart,
+          END OF lty_mara,
+
+          BEGIN OF lty_makt,
+            matnr TYPE matnr,
+            maktx TYPE maktx,
+            END OF lty_makt.
+
+  TYPES: BEGIN OF lty_lfa1,
+          lifnr TYPE lifnr,
+          name1 TYPE name1_gp,
+          adrnr TYPE adrnr,
+        END   OF lty_lfa1.
+
+  TYPES :    BEGIN OF lty_tvro,
+             route    TYPE route,
+             traztd   TYPE traztd,
+             distz    TYPE  distz,
+             medst    TYPE  medst,
+             tdlnr    TYPE  tdlnr,
+            END OF lty_tvro,
+
+            BEGIN OF lty_ekbe,
+              ebeln TYPE ebeln,
+              belnr TYPE mblnr,
+              menge TYPE menge_d,
+              dmbtr TYPE dmbtr,
+            END OF lty_ekbe,
+
+             BEGIN OF lty_rbkp,
+                belnr TYPE re_belnr,
+                rmwwr TYPE rmwwr,
+                stblg TYPE re_stblg,
+             END OF lty_rbkp,
+
+             BEGIN OF lty_konv,
+               knumv TYPE knumv,
+               kposn TYPE kposn,
+               stunr TYPE stunr,
+               zaehk TYPE dzaehk,
+               kschl TYPE kscha,
+               kawrt TYPE kawrt,
+             END OF lty_konv,
+
+             BEGIN OF lty_t001k,
+              bwkey TYPE bwkey,
+              bukrs TYPE bukrs,
+             END OF lty_t001k,
+
+            BEGIN OF lty_yttspod,
+           billno	TYPE vbeln_vf,
+           status	TYPE zttspod_status,
+           ro_out_date TYPE	datum,
+           END OF lty_yttspod,
+
+           BEGIN OF lty_zlrpo_sel,
+           exnum  TYPE exnum,
+           exdat TYPE	exdat,
+           vbeln TYPE vbeln_vf,
+           shnumber TYPE  oig_shnum,
+           END OF lty_zlrpo_sel.
+
+  TYPES : BEGIN OF lty_addrnum,
+          addrnumber TYPE ad_addrnum,
+         END OF lty_addrnum.
+
+  TYPES: BEGIN OF ty_konv_1,
+    knumv TYPE knumv,
+    kposn TYPE kposn,
+    kbetr TYPE kbetr,
+    kpein TYPE kpein,
+    kmein TYPE kmein,
+    kwert TYPE kwert,
+  END OF ty_konv_1.
+
+*************  BOC Vankudoth.Kumar 29.11.2022
+  TYPES: BEGIN OF ty_oigv,
+          vehicle TYPE oig_vhlnmr,
+          veh_id TYPE oig_vehid,
+         END OF ty_oigv.
+  DATA: lt_oigv TYPE STANDARD TABLE OF ty_oigv,
+        lw_oigv TYPE ty_oigv.
+*************  EOC Vankudoth.Kumar 29.11.2022
+
+  DATA: lw_knumv TYPE knumv,
+        lw_konv_1 TYPE ty_konv_1.
+
+  DATA : lt_oigs            TYPE TABLE OF lty_oigs,
+         lt_oigs_ib         TYPE TABLE OF lty_oigs,
+         lt_oigs_t          TYPE TABLE OF lty_oigs,
+         lw_oigs            TYPE lty_oigs,
+         lt_zlog_exec_var   TYPE TABLE OF lty_zlog_exec_var,
+         lw_zlog_exec_var   TYPE lty_zlog_exec_var,
+         lt_yttstx0002      TYPE TABLE OF lty_yttstx0002,
+         lt_yttstx0002_t    TYPE TABLE OF lty_yttstx0002,
+         lw_yttstx0002      TYPE lty_yttstx0002,
+         lw_yttstx0002_t    TYPE lty_yttstx0002,
+         lt_yttstx0001      TYPE TABLE OF lty_yttstx0001,
+         lt_yttstx0001_t    TYPE TABLE OF lty_yttstx0001,
+         lw_yttstx0001      TYPE lty_yttstx0001,
+         lt_oigsi           TYPE TABLE OF lty_oigsi,
+         lt_oigsi_temp      TYPE TABLE OF lty_oigsi,
+         lw_oigsi           TYPE lty_oigsi,
+         lw_oigsi_t         TYPE lty_oigsi,
+         lt_ylicm           TYPE TABLE OF lty_ylicm,
+         lw_ylicm           TYPE lty_ylicm,
+         lt_lips            TYPE TABLE OF lty_lips,
+         lt_lips_tmp        TYPE TABLE OF lty_lips,
+         lt_lips_temp       TYPE TABLE OF lty_lips,
+         lw_lips            TYPE lty_lips,
+         lw_lips_t          TYPE lty_lips,
+         lt_vbak            TYPE TABLE OF lty_vbak,
+         lw_vbak            TYPE lty_vbak,
+         lt_ekko            TYPE TABLE OF gty_ekko,
+         lt_ekko_temp       TYPE TABLE OF gty_ekko,
+         lw_ekko            TYPE gty_ekko,
+         lt_ekpo            TYPE TABLE OF gty_ekpo,
+         lw_ekpo            TYPE gty_ekpo,
+         lw_ekpo_t          TYPE gty_ekpo,
+         lt_mara            TYPE TABLE OF lty_mara,
+         lw_mara            TYPE lty_mara,
+         lt_makt            TYPE TABLE OF lty_makt,
+         lw_makt            TYPE lty_makt,
+         lt_tvro            TYPE TABLE OF lty_tvro,
+         lw_tvro            TYPE                   lty_tvro,
+         lt_oigss           TYPE TABLE OF lty_oigss,
+         lt_oigss_t         TYPE TABLE OF lty_oigss,
+         lw_oigss           TYPE lty_oigss,
+         lt_tvrab           TYPE TABLE OF lty_tvrab,
+         lt_tvrab1          TYPE TABLE OF lty_tvrab,
+         lw_tvrab           TYPE lty_tvrab,
+         lt_t001w           TYPE TABLE OF lty_t001w,
+         lt_t001w_temp      TYPE TABLE OF lty_t001w,
+         lw_t001w           TYPE lty_t001w,
+         lt_adrc            TYPE TABLE OF lty_adrc,
+         lt_adrc_t          TYPE TABLE OF lty_adrc,
+         lt_adrc_k          TYPE TABLE OF lty_adrc,
+         lw_adrc            TYPE lty_adrc,
+         lt_lfa1            TYPE  TABLE OF lty_lfa1,
+         lt_lfa1_temp       TYPE  TABLE OF lty_lfa1,
+         lw_lfa1            TYPE  lty_lfa1,
+         lt_zlrpo           TYPE TABLE OF lty_zlrpo,
+         lw_zlrpo           TYPE lty_zlrpo,
+         lt_likp            TYPE TABLE OF lty_likp,
+         lt_likp_temp       TYPE TABLE OF lty_likp,
+         lw_likp            TYPE lty_likp,
+         lt_kna1            TYPE TABLE OF lty_kna1,
+         lt_kna1_temp       TYPE TABLE OF lty_kna1,
+         lw_kna1            TYPE lty_kna1,
+         lt_trolz           TYPE TABLE OF lty_trolz,
+         lt_trolz_t         TYPE TABLE OF lty_trolz,
+         lw_trolz           TYPE lty_trolz,
+         lt_oigsv           TYPE TABLE OF lty_oigsv,
+         lt_oigsv_t         TYPE TABLE OF lty_oigsv,
+         lt_oigsv_temp      TYPE TABLE OF lty_oigsv,
+         lw_oigsv           TYPE lty_oigsv,
+         lt_route           TYPE TABLE OF lty_route,
+         lw_route           TYPE          lty_route,
+         lt_ekbe            TYPE TABLE OF lty_ekbe,
+         lw_ekbe            TYPE lty_ekbe,
+         lw_ekbe_t          TYPE lty_ekbe,
+         lt_rbkp            TYPE TABLE OF lty_rbkp,
+         lw_rbkp            TYPE lty_rbkp,
+         lt_konv            TYPE TABLE OF lty_konv,
+         lw_konv            TYPE lty_konv,
+         lt_t001k           TYPE TABLE OF lty_t001k,
+         lw_t001k           TYPE lty_t001k,
+         lt_yttspod         TYPE STANDARD TABLE OF lty_yttspod,
+         lt_yttspod_tmp     TYPE STANDARD TABLE OF lty_yttspod,
+         lt_zlrpo_sel       TYPE STANDARD TABLE OF lty_zlrpo_sel,
+         lt_zlrpo_sel_tmp       TYPE STANDARD TABLE OF lty_zlrpo_sel.
+
+  DATA : lt_addrnum TYPE TABLE OF lty_addrnum,
+         lw_addrnum TYPE lty_addrnum.
+
+  DATA : lw_order_hdr_data    TYPE zsce_order_hdr_data_s,
+         lw_cn_data           TYPE zsce_cn_data_s,
+         lw_cust_doc_data_td  TYPE zsce_cust_doc_data_s,
+         lw_cust_doc_data     TYPE zsce_cust_doc_data_s.
+
+  DATA : lt_bedty   TYPE    /obiz/rimp_tt_bedty,
+         lw_bedty   TYPE    /obiz/rimp_st_bedty.
+
+  DATA : lv_actvalu   TYPE /obiz/zmb_actdty,
+         lw_inv_value TYPE vbrk-netwr,
+         lw_netwr     TYPE netwr,
+         lw_menge     TYPE menge_d,
+         lw_lfimg_mt  TYPE lfimg,
+         lw_menge_t   TYPE menge_d,
+         lw_frght     TYPE kawrt.
+
+  DATA : lw_tknum   TYPE tknum,
+         lw_tknum1  TYPE tknum, "Added By Kalpesh 22.02.2024
+         lw_tdlnr   TYPE tdlnr,
+         lw_index   TYPE sy-tabix,
+         lw_index_i TYPE sy-tabix,
+         lw_index_l TYPE sy-tabix,
+         lw_cn_itm_no TYPE char16,
+         lw_tran_dur  TYPE traztd.
+
+  DATA : lr_shtyp_chem    TYPE RANGE OF shtyp,
+         lr_shtyp_rnm     TYPE RANGE OF shtyp,
+         lw_shtyp_rnm     LIKE LINE OF lr_shtyp_rnm, "Vankudoth.Kumar-20/09/2022
+         lw_shtyp         LIKE LINE OF lr_shtyp_chem,
+         lw_tknum_im      TYPE zsce_tknum_range,
+*         lw_inv_qty       TYPE fkimg,
+         lw_lfimg         TYPE lfimg.
+
+  DATA : lt_cn_weight      TYPE TABLE OF zscm_cn_weight_s,
+         lw_cn_weight      TYPE zscm_cn_weight_s,
+         lt_shipment       TYPE TABLE OF zscm_shipment_s,
+         lw_shipment       TYPE zscm_shipment_s.
+
+  "added on 19.05.2020 (For QWIK vehicle type)
+  DATA: lt_truckno  TYPE zscm_truckno_tt,
+        lw_truckno TYPE zscm_truckno_st,
+        lt_vehtype  TYPE zscm_vehtyp_tt,
+        lw_vehtype  TYPE zscm_vehtyp_st,
+        lt_return   TYPE bapiret2_t.
+  "end on 19.05.2020
+
+  TYPES:BEGIN OF ty_exec_po_cat,
+    name TYPE rvari_vnam,
+    remarks TYPE textr,
+    rfcdest TYPE rfcdest,
+    END OF ty_exec_po_cat.
+
+  DATA: lt_shipment_gcptcl TYPE z_scm_shipment_t,
+        lw_shipment_gcptcl TYPE zscm_shipment_s,
+        lt_po_ship TYPE zscm_shipment_po_cat_tt,
+        lt_po_ship1 TYPE zscm_shipment_po_cat_tt,
+        lw_po_ship TYPE zscm_shipment_po_cat_s,
+        lw_po_ship1 TYPE zscm_shipment_po_cat_s,
+        lw_ip_tknum LIKE LINE OF i_tknum,
+        lt_exec_po_cat TYPE STANDARD TABLE OF ty_exec_po_cat,
+        lw_exec_po_cat TYPE ty_exec_po_cat.
+
+  CONSTANTS:lc_j          TYPE c LENGTH 1 VALUE 'J',
+            lc_v          TYPE c LENGTH 1 VALUE 'v',
+            lc_7          TYPE c LENGTH 1 VALUE '7',
+            lc_v3         TYPE c LENGTH 2 VALUE 'V3',
+            lc_cn_leg_no  TYPE num03 VALUE '001',
+            lc_cn_item_no TYPE num03 VALUE '001',
+            lc_servcat    TYPE rvari_vnam   VALUE 'SCME_PF_TMS_SERVCAT',
+            lc_business   TYPE rvari_vnam   VALUE 'SCME_PF_BUSINESS',
+            lc_val5       TYPE char006      VALUE '05',
+            lc_chem_shtyp TYPE rvari_vnam   VALUE 'SCME_CHEM_IB_TO_SHTYPE', " eswara
+            lc_trans_movt TYPE rvari_vnam   VALUE 'SCME_PF_MOVT_TYPE',
+            lc_rnm_shtyp  TYPE rvari_vnam   VALUE 'SCME_POL_IB_TO_SHTYPE', "eswara
+            lc_rnm_business    TYPE rvari_vnam VALUE 'ZSCM_TOPUSH_BUSINESID_RNM_COMP',
+            lc_cnqty_fetch     TYPE rvari_vnam VALUE 'SCME_LIQ_SHTYP_CNQTY_FETCH',
+            lc_liqd_subtype    TYPE rvari_vnam VALUE 'SCME_LIQUID_TO_SUBUS_SHTYPE',
+            lc_liq_po_cat      TYPE rvari_vnam VALUE 'ZSCM_QWIK_CHEM_PO_CAT',
+            lc_liqibshlrpo     TYPE rvari_vnam VALUE 'ZSCM_LIQ_IB_SH_LRPO'.
+
+  DATA: lr_route TYPE RANGE OF route,
+        lw_route_t LIKE LINE OF lr_route,
+        lv_oic_pbatch TYPE vgbel,
+        lv_ebelp  TYPE ebelp.
+
+  """BOC BY Kalpesh 31.01.2024
+  TYPES : BEGIN OF lty_ztrstlmnt,
+          tknum TYPE tknum,
+          lr_dt TYPE zlr_dt_stl,"Added by Ajay on March 15th 2024 FE : Sbhubham Inamdar - RD2K9A4NWT
+          bill_regime TYPE textr,
+          END OF lty_ztrstlmnt,
+
+          BEGIN OF lty_par,
+          name TYPE rvari_vnam,
+          active TYPE zactive_flag,
+          remarks TYPE textr,
+          bill_vendor TYPE zbill_vendor,
+          errormsg TYPE natxt,
+          END OF lty_par,
+
+          BEGIN OF lty_ship,
+          tknum TYPE tknum,
+          END OF lty_ship.
+
+  DATA : lt_ztrstlmnt TYPE TABLE OF lty_ztrstlmnt,
+         lt_ztrstlmnt_t TYPE TABLE OF lty_ztrstlmnt,
+         lw_ztrstlmnt TYPE lty_ztrstlmnt,
+         lt_par       TYPE TABLE OF lty_par,
+         lw_par       TYPE lty_par,
+         lt_ship      TYPE TABLE OF lty_ship,
+         lw_ship      TYPE lty_ship,
+         lw_shipment1  TYPE zsce_tknum_range,
+         lv_date      TYPE datum,  "Added by Ajay on March 15th 2024 FE : Sbhubham Inamdar - RD2K9A4NWT
+         lv_billreg   TYPE char10. "Added by Ajay on March 15th 2024 FE : Sbhubham Inamdar - RD2K9A4NWT
+
+  CONSTANTS : lc_name TYPE string VALUE 'ZSCM_VEND_BILL_MAP',
+              lc_zscm_liq_sloc_to_sloc TYPE rvari_vnam VALUE 'ZSCM_LIQ_SLOC_TO_SLOC'.
+
+  FIELD-SYMBOLS: <lfs_ztrstlmnt> TYPE lty_ztrstlmnt.
+
+  """"BOC BY Kalpesh/Biswa 27.06.2024
+  TYPES : BEGIN OF lty_zscm_fcm_ven_map,
+          mandt       TYPE mandt,
+          lifnr       TYPE lifnr,
+          bill_regime TYPE zbill_regime,
+          active      TYPE zscm_active,
+          fcm5       TYPE zscm_active,
+          END OF lty_zscm_fcm_ven_map,
+
+          BEGIN OF lty_zlog,
+          mandt       TYPE mandt,
+          name        TYPE rvari_vnam,
+          active      TYPE zactive_flag,
+          remarks     TYPE textr,
+          bill_vendor TYPE zbill_vendor,
+          errormsg    TYPE natxt,
+          END OF lty_zlog.
+  DATA : lt_zscm_fcm_ven_map TYPE TABLE OF lty_zscm_fcm_ven_map,
+         lw_zscm_fcm_ven_map TYPE lty_zscm_fcm_ven_map,
+         lt_zlog             TYPE TABLE OF lty_zlog,
+         lw_zlog             TYPE lty_zlog.
+  """EOC  By Kalpesh /Biswa 27.06.2024
+
+  TYPES: BEGIN OF lty_ptc_lrpo,
+          lr_no TYPE zptc_lrpo-lr_no,
+          lr_itemno TYPE zptc_lrpo-lr_itemno,
+          shnumber TYPE zptc_lrpo-shnumber,
+         END OF lty_ptc_lrpo.
+
+  DATA:lw_ptc_lrpo TYPE lty_ptc_lrpo,
+       lt_ptc_lrpo TYPE TABLE OF lty_ptc_lrpo,
+       lt_oigsib TYPE TABLE OF lty_oigs.
+
+  FIELD-SYMBOLS:<lfs_ptc_lrpo> TYPE lty_ptc_lrpo,
+                <lfs_oigs> TYPE lty_oigs.
+
+  RANGES:lr_shnumber FOR lw_oigs-shnumber.
+  " fetching shipment types from param table .
+  SELECT name
+        shtyp
+        shtype
+        active
+        remarks
+        transplpt
+        spart
+        rfcdest
+        ewb_uom_d
+        zzpmatkl1
+    FROM zlog_exec_var CLIENT SPECIFIED
+    INTO TABLE lt_zlog_exec_var
+     WHERE mandt = sy-mandt
+      AND  name IN (lc_chem_shtyp,lc_rnm_shtyp,lc_business, lc_trans_movt, lc_servcat, gc_business_id,
+                    lc_rnm_business, lc_cnqty_fetch, lc_liqd_subtype,lc_zscm_liq_sloc_to_sloc,lc_liqibshlrpo)
+      AND  active = abap_true.
+  IF sy-subrc EQ 0.
+    SORT lt_zlog_exec_var BY name.
+  ENDIF.
+
+  "Prepare range for shipment type
+  lw_shtyp-option = 'EQ'.
+  lw_shtyp-sign   = 'I'.
+  LOOP AT lt_zlog_exec_var INTO lw_zlog_exec_var.
+    "Shipment types for Chemicals
+    IF NOT lw_zlog_exec_var-shtype IS INITIAL AND lw_zlog_exec_var-name = lc_chem_shtyp.
+      lw_shtyp-low = lw_zlog_exec_var-shtype.
+      APPEND lw_shtyp TO lr_shtyp_chem.
+    ENDIF.
+
+    "Shipment types for RNM
+    IF NOT lw_zlog_exec_var-shtype IS INITIAL AND  lw_zlog_exec_var-name = lc_rnm_shtyp .
+      lw_shtyp-low = lw_zlog_exec_var-shtype.
+      APPEND lw_shtyp TO lr_shtyp_rnm.
+    ENDIF.
+    CLEAR : lw_shtyp-low, lw_zlog_exec_var.
+  ENDLOOP.
+
+  IF i_dispt_dt IS NOT INITIAL.
+    "Fetch details for Chemical RNM Case
+    IF lr_shtyp_rnm IS NOT INITIAL.
+
+      SELECT billno
+            status
+            ro_out_date
+            FROM yttspod CLIENT SPECIFIED
+            INTO TABLE lt_yttspod
+            WHERE mandt = sy-mandt
+            AND status = 'C'
+            AND ro_out_date IN i_dispt_dt.
+      IF sy-subrc = 0.
+        SORT lt_yttspod BY  billno.
+        lt_yttspod_tmp = lt_yttspod.
+        DELETE lt_yttspod_tmp WHERE billno IS INITIAL.
+        DELETE ADJACENT DUPLICATES FROM lt_yttspod_tmp COMPARING billno.
+        IF lt_yttspod_tmp IS   NOT INITIAL.
+          SELECT exnum
+                 exdat
+                 vbeln
+                 shnumber
+                 FROM zlrpo  CLIENT SPECIFIED
+                 INTO TABLE lt_zlrpo_sel
+                 FOR ALL ENTRIES IN lt_yttspod_tmp
+                 WHERE mandt = sy-mandt
+                 AND exnum = lt_yttspod_tmp-billno.
+          IF sy-subrc = 0.
+            SORT lt_zlrpo_sel BY shnumber.
+          ENDIF.
+        ENDIF.
+      ENDIF.
+      CLEAR: lt_zlrpo_sel_tmp.
+      lt_zlrpo_sel_tmp =   lt_zlrpo_sel.
+      DELETE lt_zlrpo_sel_tmp  WHERE shnumber IS INITIAL.
+      DELETE ADJACENT DUPLICATES FROM lt_zlrpo_sel_tmp COMPARING  shnumber.
+      IF lt_zlrpo_sel_tmp IS NOT INITIAL.
+        SELECT  shnumber
+                shtype
+                wgt_uom
+                vsart
+                tplst
+                route
+                cre_date
+                oig_sstsf
+                sched_stdt
+                sched_sttm
+                load_stdt
+                load_sttm
+                load_stdta
+                load_sttma
+                load_eddta
+                load_edtma
+                del_stdta
+                del_sttma
+                lr_no
+                lr_dt
+                lr_qty
+                zzserv_plant
+          FROM oigs CLIENT SPECIFIED
+          INTO TABLE lt_oigs
+          FOR ALL ENTRIES IN lt_zlrpo_sel_tmp
+          WHERE client     EQ sy-mandt
+            AND shnumber   = lt_zlrpo_sel_tmp-shnumber.
+*            AND del_eddta  IN i_dispt_dt
+*            AND shtype     IN lr_shtyp_rnm
+*            AND tplst      IN i_tplst.
+        IF sy-subrc EQ 0.
+          DELETE lt_oigs WHERE shtype  NOT IN lr_shtyp_rnm.
+          DELETE lt_oigs WHERE tplst  NOT IN  i_tplst.
+          DELETE lt_oigs WHERE vsart NE 'RD'.
+          DELETE lt_oigs WHERE oig_sstsf NE 6.
+          IF i_tknum IS NOT INITIAL.
+            DELETE lt_oigs WHERE shnumber NOT IN i_tknum.
+          ENDIF.
+          SORT lt_oigs BY shnumber.
+        ENDIF.
+      ENDIF.
+    ENDIF.
+
+    "Fetch details for Chemical Inbound Case
+    IF lr_shtyp_chem IS NOT INITIAL.
+      SELECT  shnumber
+              shtype
+              wgt_uom
+              vsart
+              tplst
+              route
+              cre_date
+              oig_sstsf
+              sched_stdt
+              sched_sttm
+              load_stdt
+              load_sttm
+              load_stdta
+              load_sttma
+              load_eddta
+              load_edtma
+              del_stdta
+              del_sttma
+              lr_no
+              lr_dt
+              lr_qty
+              zzserv_plant
+        FROM oigs CLIENT SPECIFIED
+        APPENDING TABLE lt_oigs
+        WHERE client     EQ sy-mandt
+          AND shtype     IN lr_shtyp_chem
+          AND load_eddta IN i_dispt_dt.
+      IF sy-subrc EQ 0.
+        DELETE lt_oigs WHERE oig_sstsf LT 4.
+        DELETE lt_oigs WHERE vsart NE 'RD'.
+        DELETE lt_oigs WHERE tplst NOT IN i_tplst.
+        IF i_tknum IS NOT INITIAL.
+          DELETE lt_oigs WHERE shnumber NOT IN i_tknum.
+        ENDIF.
+        SORT lt_oigs BY shnumber.
+      ENDIF.
+    ENDIF.
+*Added by SN Das CD:8085156(Start)
+    lt_oigsib[] = lt_oigs[].
+    SORT lt_oigsib BY shnumber.
+    DELETE ADJACENT DUPLICATES FROM lt_oigsib COMPARING shnumber.
+    IF NOT lt_oigsib[] IS INITIAL.
+      SELECT lr_no
+             lr_itemno
+             shnumber
+      FROM zptc_lrpo INTO TABLE lt_ptc_lrpo
+      FOR ALL ENTRIES IN lt_oigsib
+        WHERE shnumber = lt_oigsib-shnumber.
+      IF sy-subrc = 0.
+        SORT lt_ptc_lrpo BY shnumber.
+      ENDIF.
+    ENDIF.
+
+    CLEAR:lr_shnumber,lr_shnumber[].
+    LOOP AT lt_oigs ASSIGNING <lfs_oigs>.
+      READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var
+      WITH KEY name = lc_liqibshlrpo
+               shtype = <lfs_oigs>-shtype." BINARY SEARCH not required
+      IF sy-subrc = 0.
+        READ TABLE lt_ptc_lrpo INTO lw_ptc_lrpo
+        WITH KEY shnumber = <lfs_oigs>-shnumber BINARY SEARCH.
+        IF sy-subrc NE 0.
+          lr_shnumber-sign = 'I'. lr_shnumber-option = 'EQ'.
+          lr_shnumber-low = <lfs_oigs>-shnumber. lr_shnumber-high = ''.
+          APPEND lr_shnumber TO lr_shnumber.
+        ENDIF.
+      ENDIF.
+      CLEAR:lr_shnumber,lw_zlog_exec_var,lw_yttstx0002.
+    ENDLOOP.
+    IF NOT lr_shnumber[] IS INITIAL.
+      DELETE lt_oigs WHERE shnumber IN lr_shnumber[].
+    ENDIF.
+    IF <lfs_oigs> IS ASSIGNED.UNASSIGN <lfs_oigs>.ENDIF.
+
+*Added by SN Das CD:8085156(End)
+    "vankudoth rajkumar(soc).
+
+    IF lt_oigs[] IS NOT INITIAL.
+      lt_oigs_ib[] = lt_oigs[].
+      SORT lt_oigs_ib BY shnumber.
+      DELETE ADJACENT DUPLICATES FROM lt_oigs_ib COMPARING shnumber.
+    ENDIF.
+
+    IF lt_oigs_ib[] IS NOT INITIAL.
+      CLEAR lt_ztrstlmnt[].
+      SELECT tknum lr_dt bill_regime
+              INTO TABLE lt_ztrstlmnt
+              FROM ztrstlmnt
+              FOR ALL ENTRIES IN lt_oigs_ib
+              WHERE tknum = lt_oigs_ib-shnumber.
+      IF sy-subrc = 0.
+        SORT : lt_ztrstlmnt BY tknum.
+      ENDIF.
+
+      LOOP AT lt_ztrstlmnt ASSIGNING <lfs_ztrstlmnt>.
+        IF <lfs_ztrstlmnt> IS  ASSIGNED.
+          "BOC by Ajay on March 15th 2024 FE : Sbhubham Inamdar - RD2K9A4NWT
+          IF <lfs_ztrstlmnt>-bill_regime IS INITIAL AND <lfs_ztrstlmnt>-lr_dt IS NOT INITIAL AND <lfs_ztrstlmnt>-tknum IS NOT INITIAL.
+            "Call FM
+            CLEAR : lv_date.
+            lv_date = <lfs_ztrstlmnt>-lr_dt.
+            CALL FUNCTION 'Z_SCM_FCM_VEND_ELGBTY_CHK'
+              EXPORTING
+                iv_shipment_number = <lfs_ztrstlmnt>-tknum
+                iv_validity_date   = lv_date
+              IMPORTING
+                ev_billing_regime  = lv_billreg.
+            <lfs_ztrstlmnt>-bill_regime = lv_billreg.
+          ENDIF.
+          "EOC by Ajay on March 15th 2024 FE : Sbhubham Inamdar - RD2K9A4NWT
+        ENDIF.
+      ENDLOOP.
+      IF <lfs_ztrstlmnt> IS  ASSIGNED.
+        UNASSIGN <lfs_ztrstlmnt>.
+      ENDIF.
+
+      CLEAR : lt_ztrstlmnt_t[].
+      lt_ztrstlmnt_t[] = lt_ztrstlmnt[].
+      SORT : lt_ztrstlmnt_t BY bill_regime.
+      DELETE lt_ztrstlmnt_t WHERE bill_regime IS INITIAL.
+
+      CLEAR : lt_par[].
+      IF lt_ztrstlmnt_t IS NOT INITIAL.
+        SELECT name
+               active
+               remarks
+               bill_vendor
+               errormsg
+               FROM zlog_exec_var
+               INTO TABLE lt_par
+               FOR ALL ENTRIES IN lt_ztrstlmnt_t
+               WHERE name = lc_name
+               AND active = 'X'
+               AND remarks = lt_ztrstlmnt_t-bill_regime.
+        IF sy-subrc = 0.
+          SORT : lt_par BY name remarks.
+        ENDIF.
+      ENDIF.
+    ENDIF.
+    "vankudoth rajkumar(eoc).
+
+  ENDIF.
+
+*  lt_oigs_t = lt_oigs.
+*  LOOP AT lt_oigs_t INTO lw_oigs.
+*    "Delete a shipment if TTP is not match with maintained TTP in param table for shipment type TTC2
+*    READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_chem_shtyp shtype = lw_oigs-shtype transplpt = lw_oigs-tplst.
+*    IF sy-subrc <> 0 AND lw_oigs-shtype = 'TTC2'. "AND lw_zlog_exec_var-transplpt <> lw_oigs-tplst.
+*      DELETE lt_oigs WHERE shnumber = lw_oigs-shnumber.
+*    ENDIF.
+*    CLEAR : lw_oigs, lw_zlog_exec_var.
+*  ENDLOOP.
+
+  SELECT name
+         remarks
+         rfcdest
+    FROM zlog_exec_var
+    INTO TABLE lt_exec_po_cat
+    WHERE name = lc_liq_po_cat
+      AND active = abap_true.
+  IF sy-subrc NE 0.
+    CLEAR lt_exec_po_cat.
+  ENDIF.
+
+*  LOOP AT i_tknum INTO lw_ip_tknum.
+*    lw_shipment_gcptcl-shipment = lw_ip_tknum-low.
+*    APPEND lw_shipment_gcptcl TO lt_shipment_gcptcl.
+*    CLEAR: lw_shipment_gcptcl, lw_ip_tknum.
+*  ENDLOOP.
+
+  LOOP AT lt_oigs INTO lw_oigs.
+    lw_shipment_gcptcl-shipment = lw_oigs-shnumber.
+    APPEND lw_shipment_gcptcl TO lt_shipment_gcptcl.
+    CLEAR: lw_shipment_gcptcl, lw_oigs.
+  ENDLOOP.
+
+  CALL FUNCTION 'Z_SCM_QWIK_SHIP_CHECK'
+    EXPORTING
+      it_shipment = lt_shipment_gcptcl
+    IMPORTING
+      et_po_ship  = lt_po_ship.
+
+  SORT lt_po_ship BY shnumber.
+
+  CLEAR lt_oigs_t.
+  lt_oigs_t = lt_oigs.
+
+  LOOP AT lt_oigs INTO lw_oigs.
+    CLEAR lw_shtyp_rnm."Vankudoth.Kumar-20/09/2022
+    READ TABLE lr_shtyp_rnm INTO lw_shtyp_rnm WITH KEY low = lw_oigs-shtype. "Vankudoth.Kumar-20/09/2022
+    IF sy-subrc <> 0. "Vankudoth.Kumar-20/09/2022
+      READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_chem_shtyp shtype = lw_oigs-shtype transplpt = lw_oigs-tplst.
+      IF sy-subrc NE 0.
+        DELETE lt_oigs_t WHERE shnumber = lw_oigs-shnumber.
+      ENDIF.
+    ENDIF. "Vankudoth.Kumar-20/09/2022
+  ENDLOOP.
+
+  lt_oigs = lt_oigs_t.
+
+  IF lt_oigs IS INITIAL.
+    RETURN.
+  ENDIF.
+
+  IF lt_oigs IS NOT INITIAL.
+    SELECT report_no
+        shnumber
+        trk_purpos
+        function
+        licno
+  FROM yttstx0001 CLIENT SPECIFIED
+  INTO TABLE lt_yttstx0001
+  FOR ALL ENTRIES IN lt_oigs
+  WHERE mandt      = sy-mandt
+    AND shnumber   = lt_oigs-shnumber
+    AND trk_purpos = 'R'
+    AND function   = 'MGX'.
+    IF sy-subrc = 0.
+      SORT lt_yttstx0001 BY shnumber.
+    ENDIF.
+
+    REFRESH : lt_yttstx0002, lt_yttstx0001_t.
+    lt_yttstx0001_t = lt_yttstx0001.
+    SORT lt_yttstx0001_t BY report_no.
+    DELETE ADJACENT DUPLICATES FROM lt_yttstx0001_t COMPARING report_no.
+    IF lt_yttstx0001_t IS NOT INITIAL.
+      SELECT report_no
+            shnumber
+            dlvry_qty1
+            desp_uom
+            lr_no
+            lr_dt
+            delivery
+       FROM yttstx0002 CLIENT SPECIFIED
+       INTO TABLE lt_yttstx0002
+       FOR ALL ENTRIES IN lt_yttstx0001_t
+       WHERE mandt     = sy-mandt
+         AND report_no = lt_yttstx0001_t-report_no.
+      IF sy-subrc EQ 0.
+        SORT lt_yttstx0002 BY report_no.
+      ENDIF.
+    ENDIF.
+
+    REFRESH lt_yttstx0001_t.
+    lt_yttstx0001_t = lt_yttstx0001.
+    SORT lt_yttstx0001_t BY licno.
+    DELETE ADJACENT DUPLICATES FROM lt_yttstx0001_t COMPARING licno.
+    IF lt_yttstx0001_t IS NOT INITIAL.
+      SELECT  licno
+               state
+               name
+               vlddt
+        FROM ylicm CLIENT SPECIFIED
+        INTO TABLE lt_ylicm
+        FOR ALL ENTRIES IN lt_yttstx0001_t
+        WHERE mandt = sy-mandt
+        AND   licno = lt_yttstx0001_t-licno.
+      IF sy-subrc EQ 0.
+        SORT lt_ylicm BY licno.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+
+  " Rnm get
+  IF lt_oigs IS NOT INITIAL.
+    SELECT lr_no
+          shnumber
+          created_on
+     FROM zlrpo CLIENT SPECIFIED
+     INTO TABLE lt_zlrpo
+     FOR ALL ENTRIES IN lt_oigs
+     WHERE mandt = sy-mandt
+       AND shnumber = lt_oigs-shnumber.
+    IF sy-subrc = 0.
+      SORT lt_zlrpo BY shnumber.
+    ENDIF.
+  ENDIF.
+  " Rnm
+
+  IF lt_yttstx0002 IS INITIAL AND lt_zlrpo IS INITIAL.
+    RETURN.
+  ENDIF.
+
+  IF lt_oigs IS NOT INITIAL.
+    SELECT shnumber
+           shitem
+           doc_typ
+           vgtyp
+           doc_number
+      FROM oigsi CLIENT SPECIFIED
+      INTO TABLE lt_oigsi
+      FOR ALL ENTRIES IN lt_oigs
+      WHERE client   = sy-mandt
+        AND shnumber = lt_oigs-shnumber.
+    IF sy-subrc = 0.
+      SORT lt_oigsi BY shnumber.
+    ENDIF.
+
+    SELECT shnumber
+            distz
+            medst
+            knota
+            knotz
+      FROM oigss CLIENT SPECIFIED
+      INTO TABLE lt_oigss
+      FOR ALL ENTRIES IN lt_oigs
+      WHERE client   = sy-mandt
+        AND shnumber = lt_oigs-shnumber.
+    IF sy-subrc = 0.
+      SORT lt_oigss BY shnumber.
+    ENDIF.
+
+    SELECT  shnumber
+            vehicle
+            veh_type
+            veh_id
+            carrier
+            vol_uom
+            veh_maxvol
+            route
+            cap_uom
+            shift
+      FROM oigsv CLIENT SPECIFIED
+      INTO TABLE lt_oigsv
+      FOR ALL ENTRIES IN lt_oigs
+      WHERE client   = sy-mandt
+        AND shnumber = lt_oigs-shnumber.
+    IF sy-subrc = 0.
+      SORT lt_oigsv BY shnumber.
+      LOOP AT lt_oigsv INTO lw_oigsv.
+        lw_route_t-sign = 'I'.
+        lw_route_t-option = 'EQ'.
+        lw_route_t-low = lw_oigsv-route.
+        APPEND lw_route_t TO lr_route.
+        CLEAR: lw_route,lw_oigsv.
+      ENDLOOP.
+
+      """BOC BY Kalpesh/Biswa 27.06.2024
+      CLEAR : lt_oigsv_t[].
+      lt_oigsv_t[] = lt_oigsv[].
+      SORT : lt_oigsv_t BY carrier.
+      DELETE lt_oigsv_t WHERE carrier IS INITIAL.
+      DELETE ADJACENT DUPLICATES FROM lt_oigsv_t COMPARING carrier.
+      IF lt_oigsv_t[] IS NOT INITIAL.
+        CLEAR : lt_zscm_fcm_ven_map[].
+        SELECT mandt
+               lifnr
+               bill_regime
+               active
+               fcm5
+               FROM zscm_fcm_ven_map CLIENT SPECIFIED
+               INTO TABLE lt_zscm_fcm_ven_map
+               FOR ALL ENTRIES IN lt_oigsv_t
+               WHERE mandt = sy-mandt
+               AND   lifnr = lt_oigsv_t-carrier
+               AND   active = abap_true
+               AND   fcm5   = abap_true.
+        IF sy-subrc = 0.
+          SORT : lt_zscm_fcm_ven_map BY lifnr.
+        ENDIF.
+        CLEAR : lt_zlog[].
+        SELECT mandt
+               name
+               active
+               remarks
+               bill_vendor
+               errormsg
+               FROM zlog_exec_var CLIENT SPECIFIED
+               INTO TABLE lt_zlog
+               WHERE mandt = sy-mandt
+               AND   name  = 'ZSCM_VEND_BILL_RULE_FCM'
+               AND  active = abap_true.
+        IF sy-subrc = 0.
+          SORT : lt_zlog BY name.
+        ENDIF.
+      ENDIF.
+      """"EOC By Kalpesh/Biswa 27.06.2024
+    ENDIF.
+
+    lt_oigsv_temp = lt_oigsv.
+    SORT lt_oigsv_temp BY route.
+    DELETE lt_oigsv_temp WHERE route IS INITIAL..
+    DELETE ADJACENT DUPLICATES FROM lt_oigsv_temp COMPARING route.
+    IF lt_oigsv_temp IS NOT INITIAL.
+*************** BOC Vankudoth.Kumar
+      REFRESH lt_oigv.
+      SELECT vehicle
+             veh_id
+        FROM oigv INTO TABLE lt_oigv
+        FOR ALL ENTRIES IN lt_oigsv_temp
+         WHERE vehicle = lt_oigsv_temp-vehicle.
+      IF sy-subrc = 0.
+        SORT lt_oigv BY vehicle.
+      ENDIF.
+
+*************** EOC Vankudoth.Kumar
+
+      LOOP AT lt_oigsv_temp INTO lw_oigsv.
+        IF lw_oigsv-route IS NOT INITIAL.
+          lw_route-route = lw_oigsv-route.
+          APPEND lw_route TO lt_route.
+        ENDIF.
+        CLEAR : lw_route,lw_oigsv.
+      ENDLOOP.
+
+
+
+
+      SELECT route
+             knanf
+             knend
+             sdabw
+      FROM tvrab CLIENT SPECIFIED
+      INTO TABLE lt_tvrab
+      FOR ALL ENTRIES IN lt_oigsv_temp
+      WHERE mandt = sy-mandt
+      AND route = lt_oigsv_temp-route.
+*      AND sdabw = space .
+      IF sy-subrc = 0.
+        DELETE lt_tvrab WHERE sdabw NE space.
+        SORT lt_tvrab BY route.
+      ENDIF.
+    ENDIF.
+
+    lt_oigsi_temp = lt_oigsi.
+    DELETE lt_oigsi_temp WHERE doc_number IS INITIAL.
+    DELETE ADJACENT DUPLICATES FROM lt_oigsi_temp COMPARING doc_number.
+    IF lt_oigsi_temp IS NOT INITIAL.
+      SELECT   vbeln
+          btgew
+          ntgew
+          gewei
+          kunnr
+          route
+     FROM likp CLIENT SPECIFIED
+     INTO TABLE lt_likp
+     FOR ALL ENTRIES IN lt_oigsi_temp
+     WHERE mandt = sy-mandt
+     AND   vbeln = lt_oigsi_temp-doc_number.
+      IF sy-subrc = 0.
+        CLEAR :  lt_likp_temp .
+        lt_likp_temp = lt_likp.
+        DELETE lt_likp_temp WHERE kunnr IS INITIAL.
+        SORT lt_likp_temp BY kunnr.
+        DELETE ADJACENT DUPLICATES FROM lt_likp_temp COMPARING kunnr.
+        IF lt_likp_temp IS NOT INITIAL.
+          SELECT  kunnr
+                  name1
+                  adrnr
+            FROM  kna1 CLIENT SPECIFIED
+            INTO TABLE lt_kna1
+            FOR ALL ENTRIES IN lt_likp_temp
+            WHERE mandt = sy-mandt
+            AND   kunnr = lt_likp_temp-kunnr.
+          IF sy-subrc EQ 0.
+            SORT lt_kna1 BY adrnr.
+          ENDIF.
+        ENDIF.
+
+        CLEAR:lt_likp_temp.
+        lt_likp_temp = lt_likp.
+        SORT lt_likp_temp BY route.
+        DELETE lt_likp_temp WHERE route IS INITIAL.
+        DELETE ADJACENT DUPLICATES FROM lt_likp_temp COMPARING route.
+        IF lt_likp_temp IS NOT INITIAL.
+          LOOP AT lt_likp_temp INTO lw_likp.
+            IF lw_likp-route IS NOT INITIAL.
+              lw_route_t-sign = 'I'.
+              lw_route_t-option = 'EQ'.
+              lw_route_t-low = lw_likp-route.
+              APPEND lw_route_t TO lr_route.
+              CLEAR: lw_route_t,lw_likp.
+            ENDIF.
+          ENDLOOP.
+
+          LOOP AT lt_likp_temp INTO lw_likp.
+            IF lw_likp-route IS NOT INITIAL.
+              lw_route-route = lw_likp-route.
+              APPEND lw_route TO lt_route.
+            ENDIF.
+            CLEAR : lw_route, lw_likp.
+          ENDLOOP.
+
+          SELECT route
+                 knanf
+                 knend
+                 sdabw
+          FROM tvrab CLIENT SPECIFIED
+          INTO TABLE lt_tvrab1
+          FOR ALL ENTRIES IN lt_likp_temp
+          WHERE mandt = sy-mandt
+          AND route = lt_likp_temp-route
+          AND sdabw = space .
+          IF sy-subrc = 0.
+            SORT lt_tvrab1 BY route.
+          ENDIF.
+        ENDIF.
+      ENDIF.
+
+      IF lr_route IS NOT INITIAL.
+        SELECT  route
+                traztd
+                distz
+                medst
+                tdlnr
+                FROM tvro CLIENT SPECIFIED
+                INTO TABLE lt_tvro
+*                  FOR ALL ENTRIES IN lt_likp_temp
+                WHERE mandt = sy-mandt
+                AND   route IN lr_route. "lt_likp_temp-route.
+        IF sy-subrc EQ 0.
+          SORT lt_tvro BY route.
+        ENDIF.
+      ENDIF.
+
+*      IF lt_route IS NOT INITIAL.
+*        SELECT  route
+*                azone
+*                lzone
+*          FROM trolz
+*          CLIENT SPECIFIED
+*          INTO TABLE lt_trolz
+*          FOR ALL ENTRIES IN lt_route
+*          WHERE mandt = sy-mandt
+*          AND   route = lt_route-route.
+*        IF sy-subrc EQ 0.
+*          SORT lt_trolz BY route.
+*        ENDIF.
+*      ENDIF.
+
+      SELECT vbeln
+             posnr
+             matnr
+             matkl
+             lfimg
+             meins
+             vrkme
+             arktx
+             mfrgr
+             werks
+             vgbel
+             vgpos
+             vtweg
+             spart
+             vgtyp
+        FROM lips CLIENT SPECIFIED
+        INTO TABLE lt_lips
+        FOR ALL ENTRIES IN lt_oigsi_temp
+        WHERE mandt = sy-mandt
+          AND vbeln = lt_oigsi_temp-doc_number.
+      IF sy-subrc EQ 0.
+        SORT lt_lips BY vbeln.
+        lt_lips_temp = lt_lips.
+        DELETE lt_lips_temp WHERE vgbel IS INITIAL.
+        DELETE ADJACENT DUPLICATES FROM lt_lips_temp COMPARING vgbel.
+        IF lt_lips_temp IS NOT INITIAL.
+          SELECT ebeln
+                 bukrs
+                 lifnr
+                 reswk
+                 inco1
+                 knumv
+            FROM ekko CLIENT SPECIFIED
+            INTO TABLE lt_ekko
+            FOR ALL ENTRIES IN lt_lips_temp
+            WHERE mandt = sy-mandt
+              AND ebeln = lt_lips_temp-vgbel.     "vbeln
+          IF sy-subrc = 0.
+            SORT lt_ekko BY ebeln.
+          ENDIF.
+
+          CLEAR lt_ekko_temp.
+          lt_ekko_temp = lt_ekko.
+          DELETE lt_ekko_temp WHERE lifnr IS INITIAL.
+          SORT lt_ekko_temp BY lifnr.
+          DELETE ADJACENT DUPLICATES FROM lt_ekko_temp COMPARING lifnr.
+          IF lt_ekko_temp IS NOT INITIAL.
+            SELECT lifnr
+                   name1
+                   adrnr
+              FROM lfa1 CLIENT SPECIFIED
+              INTO TABLE lt_lfa1
+              FOR ALL ENTRIES IN lt_ekko_temp
+              WHERE mandt = sy-mandt
+                AND lifnr = lt_ekko_temp-lifnr.
+            IF sy-subrc EQ 0.
+              SORT lt_lfa1 BY lifnr.
+              CLEAR : lt_lfa1_temp.
+
+              "Collect LFA1-ADRNR to fetch details from ADRC
+              lt_lfa1_temp = lt_lfa1.
+              SORT lt_lfa1_temp BY adrnr.
+              DELETE lt_lfa1_temp WHERE adrnr IS INITIAL.
+              DELETE ADJACENT DUPLICATES FROM lt_lfa1_temp COMPARING adrnr.
+              LOOP AT lt_lfa1_temp INTO lw_lfa1.
+                IF lw_lfa1-adrnr IS NOT INITIAL.
+                  lw_addrnum-addrnumber = lw_lfa1-adrnr.
+                  APPEND lw_addrnum TO lt_addrnum.
+                ENDIF.
+                CLEAR : lw_addrnum, lw_lfa1.
+              ENDLOOP.
+            ENDIF.
+
+            CLEAR lt_ekko_temp.
+            lt_ekko_temp = lt_ekko.
+            SORT lt_ekko_temp BY knumv.
+            DELETE ADJACENT DUPLICATES FROM lt_ekko_temp COMPARING knumv.
+            IF lt_ekko_temp IS NOT INITIAL.
+              SELECT knumv
+                     kposn
+                     stunr
+                     zaehk
+                     kschl
+                     kawrt
+                FROM konv CLIENT SPECIFIED
+                INTO TABLE lt_konv
+                FOR ALL ENTRIES IN lt_ekko_temp
+                WHERE mandt = sy-mandt
+                 AND  knumv = lt_ekko_temp-knumv.
+              IF sy-subrc = 0.
+                DELETE lt_konv WHERE kschl <> 'ZETB'.
+                SORT lt_konv BY knumv kposn.
+              ENDIF.
+            ENDIF.
+          ENDIF.
+
+          SELECT ebeln
+                 ebelp
+                 werks
+                 lgort
+                 menge
+                 meins
+                 berid
+                 reslo
+                 oic_pbatch
+            FROM ekpo CLIENT SPECIFIED
+            INTO TABLE lt_ekpo
+            FOR ALL ENTRIES IN lt_lips_temp
+            WHERE mandt = sy-mandt
+              AND ebeln = lt_lips_temp-vgbel.
+          IF sy-subrc = 0.
+            SORT lt_ekpo BY ebeln.
+          ENDIF.
+
+          SELECT vbeln
+               bukrs_vf
+               zzwerk
+          FROM vbak CLIENT SPECIFIED
+          INTO TABLE lt_vbak
+          FOR ALL ENTRIES IN lt_lips_temp
+          WHERE mandt = sy-mandt
+            AND vbeln = lt_lips_temp-vgbel.     "vbeln.
+          IF sy-subrc = 0.
+            SORT lt_vbak BY vbeln.
+          ENDIF.
+
+          SELECT ebeln
+                 belnr
+                 menge
+                 dmbtr
+            FROM ekbe CLIENT SPECIFIED
+            INTO TABLE lt_ekbe
+            FOR ALL ENTRIES IN  lt_lips_temp
+            WHERE mandt = sy-mandt
+              AND ebeln = lt_lips_temp-vgbel
+              AND vgabe = '2'.
+          IF sy-subrc = 0.
+            SORT lt_ekbe BY belnr.
+            IF lt_ekbe IS NOT INITIAL.
+              SELECT belnr
+                     rmwwr
+                     stblg
+                FROM rbkp CLIENT SPECIFIED
+                INTO TABLE lt_rbkp
+                FOR ALL ENTRIES IN lt_ekbe
+                WHERE mandt = sy-mandt
+                 AND  belnr = lt_ekbe-belnr.
+              IF sy-subrc = 0.
+                SORT lt_rbkp BY belnr.
+              ENDIF.
+            ENDIF.
+          ENDIF.
+        ENDIF.
+
+        lt_lips_tmp = lt_lips.
+        SORT lt_lips_tmp BY  werks.
+        DELETE lt_lips_tmp WHERE  werks IS INITIAL.
+        DELETE ADJACENT DUPLICATES FROM lt_lips_tmp COMPARING  werks.
+        IF lt_lips_tmp IS NOT INITIAL.
+          SELECT werks
+                 name1
+                 adrnr
+            FROM t001w
+            CLIENT SPECIFIED
+            INTO TABLE lt_t001w
+            FOR ALL ENTRIES IN lt_lips_tmp
+            WHERE mandt = sy-mandt
+            AND   werks = lt_lips_tmp-werks.
+          IF sy-subrc EQ 0.
+*            SORT lt_t001w BY adrnr.
+            SORT lt_t001w BY werks.
+
+            "Collect T001W-ADRNR to fetch details from ADRC
+            lt_t001w_temp = lt_t001w.
+            SORT  lt_t001w_temp BY adrnr.
+            DELETE lt_t001w_temp WHERE adrnr IS INITIAL.
+            DELETE ADJACENT DUPLICATES FROM lt_t001w_temp COMPARING adrnr.
+            LOOP AT lt_t001w_temp INTO lw_t001w.
+              IF lw_t001w-adrnr IS NOT INITIAL.
+                lw_addrnum-addrnumber = lw_t001w-adrnr.
+                APPEND lw_addrnum TO lt_addrnum.
+              ENDIF.
+              CLEAR : lw_t001w, lw_addrnum.
+            ENDLOOP.
+          ENDIF.
+
+          SELECT bwkey
+                 bukrs
+           FROM t001k CLIENT SPECIFIED
+           INTO TABLE lt_t001k
+           FOR ALL ENTRIES IN lt_lips_tmp
+           WHERE mandt = sy-mandt
+             AND bwkey = lt_lips_tmp-werks.
+          IF sy-subrc = 0.
+            SORT lt_t001k BY bwkey.
+          ENDIF.
+        ENDIF.
+
+        SORT lt_addrnum BY addrnumber.
+        DELETE ADJACENT DUPLICATES FROM lt_addrnum COMPARING addrnumber.
+        IF lt_addrnum IS NOT INITIAL.
+          SELECT  addrnumber
+                  post_code1
+                  transpzone
+                  region
+           FROM adrc CLIENT SPECIFIED
+           INTO TABLE lt_adrc
+           FOR ALL ENTRIES IN lt_addrnum
+           WHERE client = sy-mandt
+             AND addrnumber = lt_addrnum-addrnumber.
+          IF sy-subrc IS INITIAL.
+            SORT lt_adrc BY addrnumber.
+          ENDIF.
+        ENDIF.
+
+        CLEAR : lt_lips_tmp.
+        lt_lips_tmp = lt_lips.
+        SORT lt_lips_tmp BY  matnr.
+        DELETE ADJACENT DUPLICATES FROM lt_lips_tmp COMPARING  matnr.
+        IF lt_lips_tmp IS NOT INITIAL.
+          SELECT matnr
+                 matkl
+                 spart
+            FROM mara CLIENT SPECIFIED
+            INTO TABLE lt_mara
+            FOR ALL ENTRIES IN lt_lips_tmp
+            WHERE mandt = sy-mandt
+              AND matnr = lt_lips_tmp-matnr.
+          IF sy-subrc = 0.
+            SORT lt_mara BY matnr.
+
+            SELECT matnr
+                   maktx
+              FROM makt CLIENT SPECIFIED
+              INTO TABLE lt_makt
+              FOR ALL ENTRIES IN lt_mara
+              WHERE mandt = sy-mandt
+                AND matnr = lt_mara-matnr
+                AND spras = 'EN'.
+            IF sy-subrc = 0.
+              SORT lt_makt BY matnr.
+            ENDIF.
+          ENDIF.
+        ENDIF.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+
+  "added on 19.05.2020 (To get QWIK vehicle type)
+  LOOP AT lt_oigsv INTO lw_oigsv.
+    IF lw_oigsv-veh_id IS NOT INITIAL.                                          "added by Vankudoth.Kumar
+      lw_truckno-truck_no = lw_oigsv-veh_id.
+      APPEND lw_truckno TO lt_truckno.
+      CLEAR lw_truckno.
+    ELSEIF lw_oigsv-veh_id IS INITIAL.                                          "added by Vankudoth.Kumar
+      READ TABLE lt_oigv INTO lw_oigv WITH KEY vehicle = lw_oigsv-vehicle.      "added by Vankudoth.Kumar
+      lw_truckno-truck_no = lw_oigv-veh_id.                                     "added by Vankudoth.Kumar
+      APPEND lw_truckno TO lt_truckno.                                          "added by Vankudoth.Kumar
+      CLEAR lw_truckno.                                                         "added by Vankudoth.Kumar
+    ENDIF.
+  ENDLOOP.
+
+  CALL FUNCTION 'Z_SCM_GET_QWIKVEH'
+    EXPORTING
+      it_truckno = lt_truckno
+    IMPORTING
+      et_return  = lt_return
+      et_vehtyp  = lt_vehtype.
+
+  SORT lt_vehtype BY truck_no.
+  "end on 19.05.2020
+
+
+  "(BOC by NUM_005 for Cd-8049750 Tr-RD2K9A34BR On 29.10.2020 Fnc-Swapnesh
+  LOOP AT lt_oigs INTO lw_oigs.
+    READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_cnqty_fetch shtype = lw_oigs-shtype.
+    IF sy-subrc = 0.
+      lw_shipment-shipment = lw_oigs-shnumber.
+      APPEND lw_shipment TO lt_shipment.
+    ENDIF.
+    CLEAR : lw_oigs, lw_shipment, lw_zlog_exec_var.
+  ENDLOOP.
+
+  SORT lt_shipment.
+  DELETE ADJACENT DUPLICATES FROM lt_shipment COMPARING ALL FIELDS.
+  IF lt_shipment IS NOT INITIAL.
+    CALL FUNCTION 'Z_SCM_LIQUID_CN_WEIGHT'
+      EXPORTING
+        it_shipment = lt_shipment
+      IMPORTING
+        et_qty_dtls = lt_cn_weight.
+    IF sy-subrc = 0.
+      SORT lt_cn_weight BY shipment docnr.
+    ENDIF.
+  ENDIF.
+  "EOC by NUM_005 for Cd-8049750 Tr-RD2K9A34BR On 29.10.2020 Fnc-Swapnesh )
+
+  "------Order Header Data
+  LOOP AT lt_oigs INTO lw_oigs.
+*    lw_order_hdr_data-business_id  = 'RIL'.
+    READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = gc_business_id.     "Binary search not required
+    IF sy-subrc = 0.
+      lw_order_hdr_data-business_id = lw_zlog_exec_var-remarks.
+    ENDIF.
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+      EXPORTING
+        input  = lw_oigs-shnumber
+      IMPORTING
+        output = lw_tknum.
+    lw_order_hdr_data-shipment_no              = lw_tknum.
+    lw_order_hdr_data-shipment_status          = '1'.
+    lw_order_hdr_data-actual_date_of_checkin   =  lw_oigs-load_stdta .
+    lw_order_hdr_data-actual_time_of_checkin   =  lw_oigs-load_sttma.
+    lw_order_hdr_data-shipment_start_date      =  lw_oigs-load_eddta.     "del_stdta.
+    lw_order_hdr_data-shipment_start_time      =  lw_oigs-load_edtma.     "del_sttma.
+    lw_order_hdr_data-transport_mode           =  lw_oigs-vsart.
+    lw_order_hdr_data-shipment_date            =  lw_oigs-cre_date.
+    lw_order_hdr_data-planned_vehicle_placement_date = lw_oigs-load_stdt.  "sched_stdt.
+    lw_order_hdr_data-planned_vehicle_placement_time = lw_oigs-load_sttm.  "sched_sttm.
+    lw_order_hdr_data-attendance_applicable    = 'N'.
+
+    READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_trans_movt.
+    IF sy-subrc = 0.
+      lw_order_hdr_data-trans_movt    = lw_zlog_exec_var-remarks.
+    ENDIF.
+
+    lw_order_hdr_data-movt_dir = 'I'.
+    lw_order_hdr_data-cpod_applicable = 'N'.
+
+    READ TABLE lt_yttstx0001 INTO lw_yttstx0001 WITH KEY shnumber = lw_oigs-shnumber BINARY SEARCH.
+    IF sy-subrc EQ 0.
+      lw_order_hdr_data-licence_no1 = lw_yttstx0001-licno.
+      READ TABLE lt_ylicm INTO lw_ylicm WITH KEY licno = lw_yttstx0001-licno BINARY SEARCH.
+      IF sy-subrc EQ 0.
+        lw_order_hdr_data-expiry_date1            = lw_ylicm-vlddt.
+        lw_order_hdr_data-licence_issuing_state1  = lw_ylicm-state.
+        lw_order_hdr_data-driver_name1            = lw_ylicm-name.
+      ENDIF.
+    ENDIF.
+
+    READ TABLE lt_oigsi INTO lw_oigsi WITH KEY shnumber = lw_oigs-shnumber BINARY SEARCH.
+    IF sy-subrc  IS INITIAL.
+      READ TABLE lt_lips INTO lw_lips WITH KEY vbeln = lw_oigsi-doc_number BINARY SEARCH.
+      IF sy-subrc IS INITIAL.
+        READ TABLE lt_ekko INTO lw_ekko WITH KEY ebeln = lw_lips-vgbel BINARY SEARCH.
+        IF sy-subrc = 0 AND lw_ekko-lifnr IS NOT INITIAL.
+          READ TABLE lt_lfa1 INTO lw_lfa1 WITH KEY lifnr = lw_ekko-lifnr BINARY SEARCH.
+          IF sy-subrc  IS INITIAL.
+            READ TABLE lt_adrc INTO lw_adrc WITH KEY addrnumber = lw_lfa1-adrnr BINARY SEARCH.
+            IF sy-subrc IS INITIAL.
+              lw_order_hdr_data-source_statecode  = lw_adrc-region.
+              lw_order_hdr_data-source_postalcode = lw_adrc-post_code1.
+            ENDIF.
+          ENDIF.
+        ELSEIF  lw_ekko-reswk IS NOT INITIAL.
+          READ TABLE lt_t001w INTO lw_t001w WITH KEY werks = lw_ekko-reswk BINARY SEARCH.
+          IF sy-subrc  IS INITIAL.
+            READ TABLE lt_adrc INTO lw_adrc WITH KEY addrnumber = lw_t001w-adrnr BINARY SEARCH.
+            IF sy-subrc IS INITIAL.
+              lw_order_hdr_data-source_statecode  = lw_adrc-region.
+              lw_order_hdr_data-source_postalcode = lw_adrc-post_code1.
+            ENDIF.
+          ENDIF.
+        ENDIF.
+
+        READ TABLE lt_t001w INTO lw_t001w WITH KEY werks = lw_lips-werks BINARY SEARCH.
+        IF sy-subrc  IS INITIAL.
+          READ TABLE lt_adrc INTO lw_adrc WITH KEY addrnumber = lw_t001w-adrnr BINARY SEARCH.
+          IF sy-subrc IS INITIAL.
+            lw_order_hdr_data-destination_statecode  =  lw_adrc-region.
+            lw_order_hdr_data-destination_postalcode =  lw_adrc-post_code1.
+          ENDIF.
+        ENDIF.
+
+        IF lw_lips-spart IS NOT INITIAL.
+          READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_business spart = lw_lips-spart zzpmatkl1 = lw_lips-matkl..  "Binary Search not required
+          IF sy-subrc IS INITIAL.
+            lw_order_hdr_data-subusiness_id     = lw_zlog_exec_var-remarks.
+          ELSE.
+            READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_business
+                                                                       spart = lw_lips-spart
+                                                                       zzpmatkl1 = ' ' .  "Binary Search not required
+            IF sy-subrc IS INITIAL.
+              lw_order_hdr_data-subusiness_id     = lw_zlog_exec_var-remarks.
+            ENDIF.
+          ENDIF.
+        ELSEIF lw_lips-matnr IS NOT INITIAL.
+          READ TABLE lt_mara INTO lw_mara WITH KEY matnr = lw_lips-matnr BINARY SEARCH.
+          IF sy-subrc = 0 AND lw_mara-spart IS NOT INITIAL.
+            READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_business spart = lw_mara-spart zzpmatkl1 = lw_mara-matkl.  "Binary Search not required
+            IF sy-subrc IS INITIAL.
+              lw_order_hdr_data-subusiness_id     = lw_zlog_exec_var-remarks.
+            ELSE.
+              READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_business
+                                                                         spart = lw_mara-spart
+                                                                         zzpmatkl1 = ' '.  "Binary Search not required
+              IF sy-subrc IS INITIAL.
+                lw_order_hdr_data-subusiness_id     = lw_zlog_exec_var-remarks.
+              ENDIF.
+            ENDIF.
+          ENDIF.
+        ENDIF.
+
+        "Logic to fetch a business & sub-business for RNM
+        READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_rnm_shtyp shtype = lw_oigs-shtype.
+        IF sy-subrc = 0.
+          READ TABLE lt_t001k INTO lw_t001k WITH KEY bwkey = lw_lips-werks BINARY SEARCH.
+          IF sy-subrc = 0.
+            READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_rnm_business ewb_uom_d = lw_t001k-bukrs.
+            IF sy-subrc = 0.
+              lw_order_hdr_data-business_id   = lw_zlog_exec_var-remarks.
+              lw_order_hdr_data-subusiness_id = lw_zlog_exec_var-rfcdest.
+            ENDIF.
+          ENDIF.
+        ENDIF.
+
+      ENDIF.
+
+      READ TABLE lt_oigss INTO lw_oigss WITH KEY shnumber = lw_oigs-shnumber BINARY SEARCH.
+      IF sy-subrc EQ 0.
+        lw_order_hdr_data-route_distance         = lw_oigss-distz.
+        lw_order_hdr_data-route_distance_uom     = lw_oigss-medst.
+        lw_order_hdr_data-source_location        = lw_oigss-knota.
+        lw_order_hdr_data-destination_location   = lw_oigss-knotz.
+      ELSE.
+        READ TABLE lt_tvrab INTO lw_tvrab  WITH KEY route = lw_oigs-route BINARY SEARCH.
+        IF sy-subrc = 0.
+          lw_order_hdr_data-source_location      = lw_tvrab-knanf.
+          lw_order_hdr_data-destination_location = lw_tvrab-knend.
+        ENDIF.
+        READ TABLE lt_tvro INTO lw_tvro WITH KEY route = lw_oigs-route BINARY SEARCH.
+        IF sy-subrc = 0.
+          lw_order_hdr_data-route_distance      = lw_tvro-distz.
+          lw_order_hdr_data-route_distance_uom  = lw_tvro-medst.
+        ENDIF.
+
+      ENDIF.
+    ENDIF.
+
+    READ TABLE lt_oigsv INTO lw_oigsv WITH KEY shnumber = lw_oigs-shnumber BINARY SEARCH.
+    IF sy-subrc IS INITIAL.
+      lw_order_hdr_data-vehicle_number = lw_oigsv-veh_id.
+*     lw_order_hdr_data-vehicle_type   = lw_oigsv-veh_type. "commented on 19.05.2020
+
+***** BOC Vankudoth.Kumar-22.11.2022
+      IF lw_oigsv-veh_id IS INITIAL.
+        CLEAR: lw_oigv.
+        READ TABLE lt_oigv INTO lw_oigv WITH KEY vehicle = lw_oigsv-vehicle.
+        IF sy-subrc = 0.
+          lw_order_hdr_data-vehicle_number = lw_oigv-veh_id.
+        ENDIF.
+*    ELSE.
+*      lw_order_hdr_data-vehicle_number = lw_oigv-veh_id.
+      ENDIF.
+***** EOC Vankudoth.Kumar-22.11.2022
+
+      lw_order_hdr_data-route_id       = lw_oigsv-route.
+      "added on 19.05.2020( Populate QWIK vehicle type)
+
+      "added by Ravi M on 27.05.2021
+      IF lw_order_hdr_data-route_id IS INITIAL.
+        READ TABLE lt_likp INTO lw_likp WITH KEY vbeln = lw_oigsi-doc_number BINARY SEARCH.
+        IF sy-subrc = 0.
+          lw_order_hdr_data-route_id = lw_likp-route.
+        ENDIF.
+      ENDIF.
+      "end of add by ravi M on 27.05.2021
+
+      READ TABLE lt_vehtype INTO lw_vehtype
+              WITH KEY truck_no = lw_oigsv-veh_id BINARY SEARCH.
+      IF sy-subrc = 0.
+        lw_order_hdr_data-vehicle_type =  lw_vehtype-veh_typ.
+      ELSE."if not found
+****************** BOC Vankudoth.Kumar
+        IF lw_oigsv-veh_id IS INITIAL.
+          READ TABLE lt_oigv INTO lw_oigv WITH KEY vehicle = lw_oigsv-vehicle.
+          IF sy-subrc = 0.
+            READ TABLE lt_vehtype INTO lw_vehtype WITH KEY truck_no = lw_oigv-veh_id BINARY SEARCH.
+            IF sy-subrc = 0.
+              lw_order_hdr_data-vehicle_type  =  lw_vehtype-veh_typ.
+            ENDIF.
+          ENDIF.
+        ENDIF.
+******************** EOC Vankudoth.Kumar
+      ENDIF.
+      "end on 19.05.2020
+
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+        EXPORTING
+          input  = lw_oigsv-carrier
+        IMPORTING
+          output = lw_oigsv-carrier.
+      lw_order_hdr_data-vendor_code = lw_oigsv-carrier.
+
+      CLEAR : lw_tvro.
+      READ TABLE lt_tvro INTO lw_tvro WITH KEY route = lw_oigsv-route BINARY SEARCH.
+      IF sy-subrc IS INITIAL .
+
+        CALL FUNCTION 'CONVERSION_EXIT_TSTRG_OUTPUT'
+          EXPORTING
+            input  = lw_tvro-traztd
+          IMPORTING
+            output = lw_tran_dur.
+
+        lw_order_hdr_data-transit_dur_days = lw_tran_dur.
+
+      ENDIF.
+    ENDIF.
+
+    READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_liqd_subtype shtype = lw_oigs-shtype.
+    IF sy-subrc = 0.
+      lw_order_hdr_data-subusiness_id = lw_zlog_exec_var-remarks.
+    ENDIF.
+
+    APPEND lw_order_hdr_data TO et_lib_header_data.
+
+    CLEAR : lw_order_hdr_data, lw_oigs, lw_tknum, lw_yttstx0002, lw_yttstx0001, lw_ylicm, lw_oigsi, lw_lips, lw_likp,
+            lw_t001w, lw_adrc, lw_zlog_exec_var, lw_likp, lw_kna1, lw_adrc, lw_oigsv, lw_oigss, lw_tran_dur, lw_t001k.
+  ENDLOOP.
+
+  "------Order CN Data
+  LOOP AT lt_oigs INTO lw_oigs.
+
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+      EXPORTING
+        input  = lw_oigs-shnumber
+      IMPORTING
+        output = lw_tknum.
+
+    lw_cn_data-shipment_no = lw_tknum.
+
+    ""BOC BY Kalpesh 31.01.2024
+    lw_tknum1 = lw_tknum.
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+      EXPORTING
+        input  = lw_tknum1
+      IMPORTING
+        output = lw_tknum1.
+
+    ""BOC By Kalpesh/Biswa 27.06.2024
+    CLEAR : lw_oigsv.
+    READ TABLE lt_oigsv INTO lw_oigsv WITH KEY shnumber = lw_oigs-shnumber BINARY SEARCH.
+    IF sy-subrc = 0.
+      CLEAR : lw_zscm_fcm_ven_map.
+      READ TABLE lt_zscm_fcm_ven_map INTO lw_zscm_fcm_ven_map WITH KEY lifnr = lw_oigsv-carrier BINARY SEARCH.
+      IF sy-subrc = 0 AND lw_zscm_fcm_ven_map-fcm5 EQ abap_true AND lw_zscm_fcm_ven_map-active EQ abap_true.
+        CLEAR : lw_zlog.
+        READ TABLE lt_zlog INTO lw_zlog WITH KEY name = 'ZSCM_VEND_BILL_RULE_FCM' BINARY SEARCH.
+        IF sy-subrc = 0.
+          lw_cn_data-gtabillingrule = lw_zlog-errormsg.
+          lw_cn_data-gta_applicable = lw_zlog-bill_vendor.
+        ENDIF.
+      ELSE.
+        CLEAR : lw_ztrstlmnt.
+        READ TABLE lt_ztrstlmnt INTO lw_ztrstlmnt WITH KEY tknum = lw_tknum1 BINARY SEARCH.
+        IF sy-subrc = 0.
+          CLEAR : lw_par.
+          READ TABLE lt_par INTO lw_par WITH KEY name = lc_name
+                                                 remarks = lw_ztrstlmnt-bill_regime BINARY SEARCH.
+          IF sy-subrc = 0.
+            lw_cn_data-gtabillingrule = lw_par-errormsg. "gw_cn_data-gtabillingrule = lw_par-errormsg.
+            IF lw_ztrstlmnt-bill_regime EQ 'FCM'.
+              lw_cn_data-gta_applicable = lw_par-bill_vendor. "gw_cn_data-gta_applicable = lw_par-bill_vendor.
+            ENDIF.
+          ENDIF.
+        ENDIF.
+      ENDIF. "Added By Kalpesh 27.06.2024
+    ENDIF. "Added By Kalpesh 27.06.2024
+    ""EOC BY Kalpesh 31.01.2024
+
+*    lw_cn_data-business_id = 'RIL'.
+    READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = gc_business_id.     "Binary search not required
+    IF sy-subrc = 0.
+      lw_cn_data-business_id = lw_zlog_exec_var-remarks.
+    ENDIF.
+    lw_cn_data-server      = syst-sysid.
+    lw_cn_data-cn_leg_no   =  lc_cn_leg_no.
+    lw_cn_data-cn_item_no  =  lc_cn_item_no.
+    lw_cn_data-state_of_material  = 'LIQUIDS'.
+
+    "@BOC by Ravi M For Cd-8056852 Tr-RD2K9A3ICF on 12.08.2021
+    "Step 1: Fetch LR Details from YTTSTX0002 (Initial Default)
+    READ TABLE lt_yttstx0001 INTO lw_yttstx0001 WITH KEY shnumber =  lw_oigs-shnumber BINARY SEARCH .
+    IF sy-subrc IS INITIAL.
+      READ TABLE lt_yttstx0002 INTO lw_yttstx0002 WITH KEY report_no = lw_yttstx0001-report_no BINARY SEARCH.
+      IF sy-subrc IS INITIAL.
+        lw_cn_data-cn_no      =  lw_yttstx0002-lr_no.
+        lw_cn_data-cn_date    =  lw_yttstx0002-lr_dt.
+        lw_cn_data-cn_qty     =  lw_yttstx0002-dlvry_qty1.
+        lw_cn_data-cn_uom     =  lw_yttstx0002-desp_uom.
+      ENDIF.
+    ENDIF.
+
+    "Step 2 & 3: Fetch LR Details from OIGS and Override if both fields are populated
+    IF lw_oigs-lr_no IS NOT INITIAL AND lw_oigs-lr_dt IS NOT INITIAL.
+      lw_cn_data-cn_no      =  lw_oigs-lr_no.
+      lw_cn_data-cn_date    =  lw_oigs-lr_dt.
+    ENDIF.
+    "@EOC by Ravi M For Cd-8056852 Tr-RD2K9A3ICF on 12.08.2021
+
+    IF lw_cn_data-gta_applicable IS INITIAL.
+      IF lw_oigs-vsart = 'RD'.
+        lw_cn_data-gta_applicable = 'A'.
+      ELSE.
+        lw_cn_data-gta_applicable = 'N'.
+      ENDIF.
+    ENDIF.
+
+    READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_servcat shtype = lw_oigs-shtype.             "--'SCME_PF_TMS_SERVCAT '
+    IF sy-subrc IS INITIAL.
+      lw_cn_data-consignment_category  =  lw_zlog_exec_var-remarks.
+    ENDIF.
+
+    READ TABLE lt_oigsv INTO lw_oigsv WITH KEY shnumber = lw_oigs-shnumber BINARY SEARCH.
+    IF sy-subrc IS INITIAL.
+      lw_cn_data-vendor_code = lw_oigsv-carrier.
+      CLEAR lw_tvrab.
+      READ TABLE lt_tvrab INTO lw_tvrab WITH KEY route = lw_oigsv-route BINARY SEARCH.
+      IF sy-subrc = 0.
+        lw_cn_data-destination_location = lw_tvrab-knend.
+        lw_cn_data-source_location      = lw_tvrab-knanf.
+      ENDIF.
+    ENDIF.
+
+    READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_rnm_shtyp shtype = lw_oigs-shtype.
+    IF sy-subrc = 0.
+      READ TABLE lt_zlrpo INTO lw_zlrpo WITH KEY shnumber = lw_oigs-shnumber BINARY SEARCH.
+      IF sy-subrc = 0.
+        lw_cn_data-cn_no   = lw_zlrpo-lr_no.
+        lw_cn_data-cn_date = lw_zlrpo-created_on.
+      ENDIF.
+    ENDIF.
+
+    READ TABLE lt_oigsi INTO lw_oigsi_t WITH KEY shnumber = lw_oigs-shnumber BINARY SEARCH.
+    IF sy-subrc IS INITIAL.
+      lw_index = sy-tabix.  "Parallel Cursor
+      LOOP AT lt_oigsi INTO lw_oigsi FROM lw_index.
+        IF lw_oigsi_t-shnumber <> lw_oigsi-shnumber.
+          EXIT.
+        ENDIF.
+
+        READ TABLE lt_likp INTO lw_likp WITH KEY vbeln = lw_oigsi-doc_number BINARY SEARCH.
+        IF sy-subrc IS INITIAL.
+          lw_cn_data-cn_gross_weight =   lw_likp-btgew.
+          lw_cn_data-cn_net_weight   =   lw_likp-ntgew.
+          lw_cn_data-cn_weight_uom   =   lw_likp-gewei.
+        ENDIF.
+
+        READ TABLE lt_lips INTO  lw_lips WITH KEY vbeln = lw_oigsi-doc_number BINARY SEARCH.
+        IF sy-subrc IS  INITIAL.
+          IF  lw_lips-vgtyp = 'V' AND ( lw_lips-vtweg = 30 OR lw_lips-vtweg = space ).
+            lw_cn_data-grn_applicable = 'A'.
+          ELSE.
+            lw_cn_data-grn_applicable = 'N'.
+          ENDIF.
+
+          lw_cn_data-material_freight_group = lw_lips-mfrgr.
+
+          "logic for CN ITEM NO
+          SHIFT lw_lips-vbeln LEFT DELETING LEADING '0'.
+          SHIFT lw_lips-posnr LEFT DELETING LEADING '0'.
+          CONCATENATE lw_lips-vbeln '_' lw_lips-posnr INTO lw_cn_itm_no.
+          lw_cn_data-cn_item_no   = lw_cn_itm_no.
+          "Logic End
+
+          "(BOC by NUM_005 for Cd-8049750 Tr-RD2K9A34BR On 29.10.2020 Fnc-Swapnesh
+          READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_cnqty_fetch shtype = lw_oigs-shtype.
+          IF sy-subrc = 0.
+            READ TABLE lt_cn_weight INTO lw_cn_weight WITH KEY shipment = lw_oigs-shnumber docnr = lw_oigsi-doc_number BINARY SEARCH.
+            IF sy-subrc = 0.
+              lw_cn_data-cn_qty     =  lw_cn_weight-quantity.
+              lw_cn_data-cn_uom     =  lw_cn_weight-uom.
+            ENDIF.
+          ELSE.
+            "EOC by NUM_005 for Cd-8049750 Tr-RD2K9A34BR On 29.10.2020 Fnc-Swapnesh )
+            lw_cn_data-cn_qty  = lw_lips-lfimg.
+            lw_cn_data-cn_uom  = lw_lips-vrkme.
+          ENDIF.
+
+          IF lw_oigs-shtype = 'TTC2'.
+            READ TABLE lt_ekko INTO lw_ekko WITH KEY ebeln = lw_lips-vgbel BINARY SEARCH.
+            IF sy-subrc IS INITIAL.
+              lw_cn_data-sending_site_code =  lw_ekko-reswk.
+            ENDIF.
+            READ TABLE lt_ekpo INTO lw_ekpo WITH KEY ebeln = lw_lips-vgbel BINARY SEARCH.
+            IF sy-subrc IS INITIAL.
+              lw_cn_data-receiving_site_code = lw_ekpo-werks.
+              READ TABLE lt_t001w INTO lw_t001w WITH KEY werks = lw_ekpo-werks BINARY SEARCH.
+              IF sy-subrc IS INITIAL.
+                READ TABLE lt_adrc INTO lw_adrc WITH KEY addrnumber = lw_t001w-adrnr BINARY SEARCH.
+                IF sy-subrc IS INITIAL.
+                  lw_cn_data-destination_statecode  =  lw_adrc-region.
+                  lw_cn_data-destination_postalcode =  lw_adrc-post_code1.
+                ENDIF.
+              ENDIF.
+            ENDIF.
+          ELSE.
+            lw_cn_data-receiving_site_code = lw_lips-werks.
+          ENDIF.
+
+          READ TABLE lt_ekko INTO lw_ekko WITH KEY ebeln = lw_lips-vgbel BINARY SEARCH.
+          IF sy-subrc = 0  AND lw_ekko-lifnr IS NOT INITIAL.
+            READ TABLE lt_lfa1 INTO lw_lfa1 WITH KEY lifnr = lw_ekko-lifnr BINARY SEARCH.
+            IF sy-subrc IS INITIAL.
+              READ TABLE lt_adrc INTO lw_adrc WITH KEY addrnumber = lw_lfa1-adrnr BINARY SEARCH.
+              IF sy-subrc  IS INITIAL.
+                lw_cn_data-source_statecode  =  lw_adrc-region.
+                lw_cn_data-source_postalcode =  lw_adrc-post_code1.
+              ENDIF.
+            ENDIF.
+          ELSE.
+            READ TABLE lt_t001w INTO lw_t001w WITH KEY werks = lw_ekko-reswk BINARY SEARCH.
+            IF sy-subrc IS INITIAL.
+              READ TABLE lt_adrc INTO lw_adrc WITH KEY addrnumber = lw_t001w-adrnr BINARY SEARCH.
+              IF sy-subrc IS INITIAL.
+                lw_cn_data-source_statecode  =  lw_adrc-region.
+                lw_cn_data-source_postalcode =  lw_adrc-post_code1.
+              ENDIF.
+            ENDIF.
+          ENDIF.
+          READ TABLE lt_t001w INTO lw_t001w WITH KEY werks = lw_lips-werks BINARY SEARCH.
+          IF sy-subrc IS INITIAL.
+            READ TABLE lt_adrc INTO lw_adrc WITH KEY addrnumber = lw_t001w-adrnr BINARY SEARCH.
+            IF sy-subrc IS INITIAL.
+              lw_cn_data-destination_statecode  =  lw_adrc-region.
+              lw_cn_data-destination_postalcode =  lw_adrc-post_code1.
+            ENDIF.
+          ENDIF.
+
+          IF lw_lips-spart IS NOT INITIAL.
+            READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_business spart = lw_lips-spart zzpmatkl1 = lw_lips-matkl.  "Binary Search not required
+            IF sy-subrc IS INITIAL.
+              lw_cn_data-subusiness_id     =  lw_zlog_exec_var-remarks.
+            ELSE.
+              READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_business
+                                                                         spart = lw_lips-spart
+                                                                         zzpmatkl1 = ' '.  "Binary Search not required
+              IF sy-subrc IS INITIAL.
+                lw_cn_data-subusiness_id     =  lw_zlog_exec_var-remarks.
+              ENDIF.
+            ENDIF.
+          ELSEIF lw_lips-matnr IS NOT INITIAL.
+            READ TABLE lt_mara INTO lw_mara WITH KEY matnr = lw_lips-matnr BINARY SEARCH.
+            IF sy-subrc = 0 AND lw_mara-spart IS NOT INITIAL.
+              READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_business spart = lw_mara-spart zzpmatkl1 = lw_mara-matkl..  "Binary Search not required
+              IF sy-subrc IS INITIAL.
+                lw_cn_data-subusiness_id     =  lw_zlog_exec_var-remarks.
+              ELSE.
+                READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_business
+                                                                           spart = lw_mara-spart
+                                                                           zzpmatkl1 = ' '.  "Binary Search not required
+                IF sy-subrc IS INITIAL.
+                  lw_cn_data-subusiness_id     =  lw_zlog_exec_var-remarks.
+                ENDIF.
+              ENDIF.
+            ENDIF.
+          ENDIF.
+
+          "Logic to fetch a business & sub-business for RNM
+          READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_rnm_shtyp shtype = lw_oigs-shtype.
+          IF sy-subrc = 0.
+            READ TABLE lt_t001k INTO lw_t001k WITH KEY bwkey = lw_lips-werks BINARY SEARCH.
+            IF sy-subrc = 0.
+              READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_rnm_business ewb_uom_d = lw_t001k-bukrs.
+              IF sy-subrc = 0.
+                lw_cn_data-business_id   = lw_zlog_exec_var-remarks.
+                lw_cn_data-subusiness_id = lw_zlog_exec_var-rfcdest.
+              ENDIF.
+            ENDIF.
+          ENDIF.
+
+          READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_liqd_subtype shtype = lw_oigs-shtype.
+          IF sy-subrc = 0.
+            lw_cn_data-subusiness_id = lw_zlog_exec_var-remarks.
+          ENDIF.
+
+          APPEND lw_cn_data TO et_lib_cn_data .
+        ENDIF.
+        CLEAR : lw_likp, lw_lips, lw_ekko.
+      ENDLOOP.
+      CLEAR : lw_index.
+    ENDIF.
+
+*    APPEND lw_cn_data TO et_lib_cn_data .
+    CLEAR : lw_cn_data, lw_oigs, lw_tknum, lw_yttstx0002_t, lw_yttstx0002, lw_oigsv, lw_zlog_exec_var, lw_t001k, lw_oigsi_t, lw_cn_weight.
+  ENDLOOP.
+
+  "------Order Cust Data
+  SORT lt_ekpo BY ebeln ebelp.
+  SORT lt_ekbe BY ebeln.
+  LOOP AT lt_oigs INTO lw_oigs.
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+      EXPORTING
+        input  = lw_oigs-shnumber
+      IMPORTING
+        output = lw_tknum.
+
+    READ TABLE lt_oigsi INTO lw_oigsi_t WITH KEY shnumber = lw_oigs-shnumber BINARY SEARCH.
+    IF sy-subrc = 0.
+      lw_index = sy-tabix.  "Parallel Cursor
+      LOOP AT lt_oigsi INTO lw_oigsi FROM lw_index.
+        IF lw_oigsi-shnumber <> lw_oigsi_t-shnumber.
+          EXIT.
+        ENDIF.
+
+*        lw_cust_doc_data_td-business_id           = 'RIL'.
+*        lw_cust_doc_data-business_id              = 'RIL'.
+        READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = gc_business_id.     "Binary search not required
+        IF sy-subrc = 0.
+          lw_cust_doc_data_td-business_id  = lw_zlog_exec_var-remarks.
+          lw_cust_doc_data-business_id     = lw_zlog_exec_var-remarks.
+        ENDIF.
+
+        lw_cust_doc_data_td-shipment_no           = lw_tknum.
+        lw_cust_doc_data-shipment_no              = lw_tknum.
+
+        lw_cust_doc_data_td-customer_doc_category = '02'.
+        lw_cust_doc_data-customer_doc_category    = '10'.
+
+        "@BOC by Ravi M For Cd-8056852 Tr-RD2K9A3ICF on 12.08.2021
+        "Step 1: Fetch LR Details from YTTSTX0002 (Initial Default)
+        READ TABLE lt_yttstx0001 INTO lw_yttstx0001 WITH KEY shnumber = lw_oigs-shnumber BINARY SEARCH.
+        IF sy-subrc = 0.
+          READ TABLE lt_yttstx0002 INTO lw_yttstx0002 WITH KEY report_no = lw_yttstx0001-report_no BINARY SEARCH.
+          IF sy-subrc = 0.
+            lw_cust_doc_data_td-cn_no          = lw_yttstx0002-lr_no.
+            lw_cust_doc_data_td-cn_date        = lw_yttstx0002-lr_dt.
+
+            lw_cust_doc_data-cn_no             = lw_yttstx0002-lr_no.
+            lw_cust_doc_data-cn_date           = lw_yttstx0002-lr_dt.
+          ENDIF.
+        ENDIF.
+
+        "Step 2 & 3: Fetch LR Details from OIGS and Override if both fields are populated
+        IF lw_oigs-lr_no IS NOT INITIAL AND lw_oigs-lr_dt IS NOT INITIAL.
+          lw_cust_doc_data_td-cn_no          = lw_oigs-lr_no.
+          lw_cust_doc_data_td-cn_date        = lw_oigs-lr_dt.
+
+          lw_cust_doc_data-cn_no             = lw_oigs-lr_no.
+          lw_cust_doc_data-cn_date           = lw_oigs-lr_dt.
+        ENDIF.
+        "@EOC by Ravi M For Cd-8056852 Tr-RD2K9A3ICF on 12.08.2021
+
+        READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_rnm_shtyp shtype = lw_oigs-shtype.
+        IF sy-subrc = 0.
+          READ TABLE lt_zlrpo INTO lw_zlrpo WITH KEY shnumber = lw_oigs-shnumber BINARY SEARCH.
+          IF sy-subrc = 0.
+            lw_cust_doc_data_td-cn_no   = lw_zlrpo-lr_no.
+            lw_cust_doc_data_td-cn_date = lw_zlrpo-created_on.
+          ENDIF.
+        ENDIF.
+
+        READ TABLE lt_lips INTO lw_lips WITH KEY vbeln = lw_oigsi-doc_number BINARY SEARCH.
+        IF sy-subrc = 0.
+          CLEAR : lw_index_l, lw_lfimg.
+          lw_index_l = sy-tabix.
+          lw_cust_doc_data_td-cust_src_doc         = lw_lips-vgbel.
+          lw_cust_doc_data_td-customer_doc_no      = lw_lips-vbeln.
+          SHIFT  lw_cust_doc_data_td-customer_doc_no  LEFT DELETING LEADING '0'. " eswara
+          lw_cust_doc_data_td-customer_doc_item_no = lw_lips-posnr.
+
+          lw_cust_doc_data-cust_src_doc            = lw_lips-vgbel.
+          lw_cust_doc_data-customer_doc_no         = lw_lips-vgbel.
+          SHIFT  lw_cust_doc_data-customer_doc_no   LEFT DELETING LEADING '0'. " eswara
+          lw_cust_doc_data-customer_doc_item_no    = lw_lips-posnr.
+
+          LOOP AT  lt_lips INTO lw_lips_t FROM lw_index_l.
+            IF lw_lips-matnr <> lw_lips_t-matnr AND lw_lips-vbeln <> lw_lips_t-vbeln.
+              EXIT.
+            ENDIF.
+            lw_lfimg = lw_lfimg + lw_lips_t-lfimg.
+            CLEAR : lw_lips_t.
+          ENDLOOP.
+
+          lw_cust_doc_data_td-invoice_qty_item     = lw_lfimg. "lw_lips-lfimg.
+          lw_cust_doc_data_td-invoice_qty_uom_item = lw_lips-vrkme.
+
+          lw_cust_doc_data_td-invoice_material_descr = lw_lips-arktx.
+          lw_cust_doc_data_td-invoice_material_item  = lw_lips-matnr.       " Added BY p10068208  CD 8047872  TR   RD2K9A309I   on 29.08.2020. Dipankar
+
+          READ TABLE lt_ekko INTO lw_ekko WITH KEY ebeln = lw_lips-vgbel BINARY SEARCH.
+          IF sy-subrc = 0.
+            lw_cust_doc_data_td-incoterm      =  lw_ekko-inco1.
+            lw_cust_doc_data_td-cust_compcode =  lw_ekko-bukrs.
+          ENDIF.
+
+          IF lw_lips-spart IS NOT INITIAL.
+            lw_cust_doc_data_td-division = lw_lips-spart.
+            READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_business spart = lw_lips-spart zzpmatkl1 = lw_lips-matkl.
+            IF sy-subrc = 0.
+              lw_cust_doc_data_td-subusiness_id = lw_zlog_exec_var-remarks.
+              lw_cust_doc_data-subusiness_id    = lw_zlog_exec_var-remarks.
+            ELSE.
+              READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_business
+                                                                         spart = lw_lips-spart
+                                                                         zzpmatkl1 = ' '.
+              IF sy-subrc = 0.
+                lw_cust_doc_data_td-subusiness_id = lw_zlog_exec_var-remarks.
+                lw_cust_doc_data-subusiness_id    = lw_zlog_exec_var-remarks.
+              ENDIF.
+            ENDIF.
+          ELSE.
+            READ TABLE lt_mara INTO lw_mara WITH KEY matnr = lw_lips-matnr BINARY SEARCH.
+            IF sy-subrc = 0.
+              lw_cust_doc_data_td-division = lw_mara-spart.
+              READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_business spart = lw_mara-spart zzpmatkl1 = lw_mara-matkl.
+              IF sy-subrc = 0.
+                lw_cust_doc_data_td-subusiness_id = lw_zlog_exec_var-remarks.
+                lw_cust_doc_data-subusiness_id    = lw_zlog_exec_var-remarks.
+              ELSE.
+                READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_business
+                                                                           spart = lw_mara-spart
+                                                                           zzpmatkl1 = ' '.
+                IF sy-subrc = 0.
+                  lw_cust_doc_data_td-subusiness_id = lw_zlog_exec_var-remarks.
+                  lw_cust_doc_data-subusiness_id    = lw_zlog_exec_var-remarks.
+                ENDIF.
+              ENDIF.
+
+*              lw_cust_doc_data_td-invoice_material_item = lw_mara-matnr.
+*              READ TABLE lt_makt INTO lw_makt WITH KEY matnr = lw_mara-matnr BINARY SEARCH.
+*              IF sy-subrc = 0.
+*                lw_cust_doc_data_td-invoice_material_descr = lw_makt-maktx.
+*              ENDIF.
+            ENDIF.
+          ENDIF.
+
+          IF lw_oigs-shtype = 'TTC2'.       " Get Invoice value for Port To Plant
+
+            " Within Same plant and differenct storage location Invoice amount fetching logic
+            READ TABLE lt_zlog_exec_var TRANSPORTING NO FIELDS WITH KEY name   = lc_zscm_liq_sloc_to_sloc
+                                                                        active = abap_true.
+            IF sy-subrc = 0.
+
+              CLEAR:lv_oic_pbatch,lv_ebelp,lw_ekpo.
+              READ TABLE lt_ekpo INTO lw_ekpo WITH KEY ebeln = lw_lips-vgbel BINARY SEARCH.
+              IF sy-subrc IS INITIAL.
+                IF lw_ekpo-werks EQ lw_ekko-reswk AND lw_ekpo-reslo NE lw_ekpo-lgort.
+                  lv_oic_pbatch = lw_ekpo-oic_pbatch+0(10).
+                  lv_ebelp      = lw_ekpo-ebelp.
+                ELSE.
+                  lv_oic_pbatch = lw_lips-vgbel.
+                  lv_ebelp      = lw_lips-vgpos.
+                ENDIF.
+              ENDIF.
+
+              SELECT knumv FROM ekko INTO lw_knumv
+                    UP TO 1 ROWS WHERE ebeln = lv_oic_pbatch.
+              ENDSELECT.
+              IF sy-subrc = 0.
+
+                SELECT knumv
+                       kposn
+                       kbetr
+                       kpein
+                       kmein
+                       kwert
+                  FROM konv INTO lw_konv_1
+                  UP TO 1 ROWS WHERE knumv = lw_knumv
+                               AND   kschl = 'ZASV'.
+                ENDSELECT.
+                IF sy-subrc NE 0.
+                  CLEAR : lw_konv_1.
+                ENDIF.
+*
+                IF lw_konv_1-kpein IS NOT INITIAL.
+                  lw_inv_value = lw_konv_1-kbetr / lw_konv_1-kpein.
+                ELSE.
+                  lw_inv_value = lw_konv_1-kwert.
+                ENDIF.
+              ENDIF.
+
+              CALL FUNCTION '/OBIZ/RIMP_GET_STOBOE'
+                EXPORTING
+                  i_sto   = lv_oic_pbatch
+                IMPORTING
+                  e_bedty = lt_bedty.
+              IF lt_bedty IS NOT INITIAL.
+                CLEAR : lv_actvalu.
+                LOOP AT lt_bedty INTO lw_bedty.       "Inner loop required, parallel cursor not possible, less entries
+                  lv_actvalu = lv_actvalu +  lw_bedty-actvalu.
+                  CLEAR : lw_bedty-actvalu, lw_bedty.
+                ENDLOOP.
+                lw_inv_value = lw_inv_value + lv_actvalu.
+              ENDIF.
+
+              READ TABLE lt_ekpo INTO lw_ekpo WITH KEY ebeln = lv_oic_pbatch ebelp = lv_ebelp BINARY SEARCH.
+              IF sy-subrc = 0 AND lw_ekpo-menge IS NOT INITIAL.
+                lw_cust_doc_data-invoice_qty_item     = lw_ekpo-menge ." lw_lips-lfimg.
+                lw_cust_doc_data-invoice_qty_uom_item = lw_ekpo-meins.
+*              lw_inv_value = lw_inv_value / lw_ekpo-menge.
+              ENDIF.
+
+*            lw_inv_value = lw_inv_value * lw_lips-lfimg.       "Final Invoice Value
+
+              lw_cust_doc_data-invoice_amount_hdr   = lw_inv_value.
+*            lw_cust_doc_data-invoice_qty_item     = lw_ekpo-menge ." lw_lips-lfimg.
+*            lw_cust_doc_data-invoice_qty_uom_item = lw_ekpo-MEINS.
+
+              READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_liqd_subtype shtype = lw_oigs-shtype.
+              IF sy-subrc = 0.
+                lw_cust_doc_data-subusiness_id = lw_zlog_exec_var-remarks.
+              ENDIF.
+
+              APPEND lw_cust_doc_data TO et_lib_cust_doc_data.
+              CLEAR : lw_cust_doc_data, lw_inv_value, lw_ekpo, lv_actvalu, lt_bedty.
+
+            ELSE.   "  lt_zlog_exec_var Else part lc_zscm_liq_sloc_to_sloc
+
+              SELECT knumv FROM ekko INTO lw_knumv
+                    UP TO 1 ROWS WHERE ebeln = lw_lips-vgbel.
+              ENDSELECT.
+              IF sy-subrc = 0.
+
+                SELECT knumv
+                       kposn
+                       kbetr
+                       kpein
+                       kmein
+                       kwert
+                  FROM konv INTO lw_konv_1
+                  UP TO 1 ROWS WHERE knumv = lw_knumv
+                               AND   kschl = 'ZASV'.
+                ENDSELECT.
+                IF sy-subrc NE 0.
+                  CLEAR : lw_konv_1.
+                ENDIF.
+*
+                IF lw_konv_1-kpein IS NOT INITIAL.
+                  lw_inv_value = lw_konv_1-kbetr / lw_konv_1-kpein.
+                ELSE.
+                  lw_inv_value = lw_konv_1-kwert.
+                ENDIF.
+              ENDIF.
+
+              CALL FUNCTION '/OBIZ/RIMP_GET_STOBOE'
+                EXPORTING
+                  i_sto   = lw_lips-vgbel
+                IMPORTING
+                  e_bedty = lt_bedty.
+              IF lt_bedty IS NOT INITIAL.
+                CLEAR : lv_actvalu.
+                LOOP AT lt_bedty INTO lw_bedty.       "Inner loop required, parallel cursor not possible, less entries
+                  lv_actvalu = lv_actvalu +  lw_bedty-actvalu.
+                  CLEAR : lw_bedty-actvalu, lw_bedty.
+                ENDLOOP.
+                lw_inv_value = lw_inv_value + lv_actvalu.
+              ENDIF.
+
+              READ TABLE lt_ekpo INTO lw_ekpo WITH KEY ebeln = lw_lips-vgbel ebelp = lw_lips-vgpos BINARY SEARCH.
+              IF sy-subrc = 0 AND lw_ekpo-menge IS NOT INITIAL.
+                lw_cust_doc_data-invoice_qty_item     = lw_ekpo-menge ." lw_lips-lfimg.
+                lw_cust_doc_data-invoice_qty_uom_item = lw_ekpo-meins.
+*              lw_inv_value = lw_inv_value / lw_ekpo-menge.
+              ENDIF.
+
+*            lw_inv_value = lw_inv_value * lw_lips-lfimg.       "Final Invoice Value
+
+              lw_cust_doc_data-invoice_amount_hdr   = lw_inv_value.
+*            lw_cust_doc_data-invoice_qty_item     = lw_ekpo-menge ." lw_lips-lfimg.
+*            lw_cust_doc_data-invoice_qty_uom_item = lw_ekpo-MEINS.
+
+              READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_liqd_subtype shtype = lw_oigs-shtype.
+              IF sy-subrc = 0.
+                lw_cust_doc_data-subusiness_id = lw_zlog_exec_var-remarks.
+              ENDIF.
+
+              APPEND lw_cust_doc_data TO et_lib_cust_doc_data.
+              CLEAR : lw_cust_doc_data, lw_inv_value, lw_ekpo, lv_actvalu, lt_bedty.
+
+            ENDIF.  "  lt_zlog_exec_var Else part lc_zscm_liq_sloc_to_sloc
+
+          ELSE.  "Get Invoice Value for Local Purchase
+
+            READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_rnm_shtyp shtype = lw_oigs-shtype.
+            IF sy-subrc <> 0.
+              READ TABLE lt_ekbe INTO lw_ekbe_t WITH KEY ebeln = lw_lips-vgbel BINARY SEARCH.
+              IF sy-subrc = 0.
+                lw_index_i = sy-tabix.
+                LOOP AT lt_ekbe INTO lw_ekbe FROM lw_index_i.   "Parallel Cursor
+                  IF lw_ekbe_t-ebeln <> lw_ekbe-ebeln.
+                    EXIT.
+                  ENDIF.
+
+                  READ TABLE lt_rbkp INTO lw_rbkp WITH KEY belnr = lw_ekbe-belnr BINARY SEARCH.
+                  IF sy-subrc = 0 AND lw_rbkp-stblg IS INITIAL.
+                    lw_netwr = lw_netwr + lw_rbkp-rmwwr.
+                  ENDIF.
+
+                  lw_menge = lw_menge + lw_ekbe-menge.
+
+                  CLEAR : lw_ekbe, lw_rbkp.
+                ENDLOOP.
+
+                IF lw_lips-vrkme = 'KG'.
+                  lw_menge_t = lw_menge.
+                  CLEAR lw_menge.
+                  CALL FUNCTION 'UNIT_CONVERSION_SIMPLE'
+                    EXPORTING
+                      input                = lw_menge_t
+                      unit_in              = 'KG'
+                      unit_out             = 'MT'
+                    IMPORTING
+                      output               = lw_menge
+                    EXCEPTIONS
+                      conversion_not_found = 1
+                      division_by_zero     = 2
+                      input_invalid        = 3
+                      output_invalid       = 4
+                      overflow             = 5
+                      type_invalid         = 6
+                      units_missing        = 7
+                      unit_in_not_found    = 8
+                      unit_out_not_found   = 9
+                      OTHERS               = 10.
+                  IF sy-subrc EQ 0.
+                    lw_cust_doc_data-invoice_qty_item     = lw_menge.
+                    lw_cust_doc_data-invoice_qty_uom_item = 'MT'.
+                  ENDIF.
+                ELSE.
+                  lw_cust_doc_data-invoice_qty_item     = lw_menge.
+                  lw_cust_doc_data-invoice_qty_uom_item = lw_lips-vrkme.
+                ENDIF.
+
+                IF lw_menge IS NOT INITIAL.
+                  IF lw_lips-vrkme = 'KG'.
+                    CLEAR : lw_lfimg_mt.
+                    CALL FUNCTION 'UNIT_CONVERSION_SIMPLE'
+                      EXPORTING
+                        input                = lw_lips-lfimg
+                        unit_in              = 'KG'
+                        unit_out             = 'MT'
+                      IMPORTING
+                        output               = lw_lfimg_mt
+                      EXCEPTIONS
+                        conversion_not_found = 1
+                        division_by_zero     = 2
+                        input_invalid        = 3
+                        output_invalid       = 4
+                        overflow             = 5
+                        type_invalid         = 6
+                        units_missing        = 7
+                        unit_in_not_found    = 8
+                        unit_out_not_found   = 9
+                        OTHERS               = 10.
+                    IF sy-subrc EQ 0.
+                      lw_inv_value = lw_netwr ."/ lw_menge.
+*                      lw_inv_value = lw_inv_value * lw_lfimg_mt.       "Final Invoice Value
+                    ENDIF.
+                  ELSE.
+                    lw_inv_value = lw_netwr ." / lw_menge.
+*                    lw_inv_value = lw_inv_value * lw_lips-lfimg.       "Final Invoice Value
+                  ENDIF.
+                ENDIF.
+              ENDIF.
+
+              IF lw_inv_value IS INITIAL.
+                CLEAR : lw_menge.
+                READ TABLE lt_ekpo INTO lw_ekpo_t WITH KEY ebeln = lw_lips-vgbel BINARY SEARCH.
+                IF sy-subrc = 0.
+                  CLEAR : lw_index_i.
+                  lw_index_i = sy-tabix.
+                  LOOP AT lt_ekpo INTO lw_ekpo FROM lw_index_i.
+                    IF lw_ekpo_t-ebeln <> lw_ekpo-ebeln.
+                      EXIT.
+                    ENDIF.
+
+                    lw_menge = lw_menge + lw_ekpo-menge.
+
+                    READ TABLE lt_ekko INTO lw_ekko WITH KEY ebeln = lw_lips-vgbel BINARY SEARCH.
+                    IF sy-subrc = 0.
+                      READ TABLE lt_konv INTO lw_konv WITH KEY knumv = lw_ekko-knumv kposn = lw_ekpo-ebelp BINARY SEARCH.
+                      IF sy-subrc = 0.
+                        lw_frght = lw_frght + lw_konv-kawrt.
+                      ENDIF.
+                    ENDIF.
+                    CLEAR : lw_ekpo, lw_ekko, lw_konv.
+                  ENDLOOP.
+                ENDIF.
+
+                IF lw_lips-vrkme = 'KG'.
+                  lw_menge_t = lw_menge.
+                  CLEAR lw_menge.
+                  CALL FUNCTION 'UNIT_CONVERSION_SIMPLE'
+                    EXPORTING
+                      input                = lw_menge_t
+                      unit_in              = 'KG'
+                      unit_out             = 'MT'
+                    IMPORTING
+                      output               = lw_menge
+                    EXCEPTIONS
+                      conversion_not_found = 1
+                      division_by_zero     = 2
+                      input_invalid        = 3
+                      output_invalid       = 4
+                      overflow             = 5
+                      type_invalid         = 6
+                      units_missing        = 7
+                      unit_in_not_found    = 8
+                      unit_out_not_found   = 9
+                      OTHERS               = 10.
+                  IF sy-subrc EQ 0.
+                    lw_cust_doc_data-invoice_qty_item     = lw_menge.
+                    lw_cust_doc_data-invoice_qty_uom_item = 'MT'.
+                  ENDIF.
+                ELSE.
+                  lw_cust_doc_data-invoice_qty_item     = lw_menge.
+                  lw_cust_doc_data-invoice_qty_uom_item = lw_lips-vrkme.
+                ENDIF.
+
+                IF lw_menge IS NOT INITIAL AND lw_frght IS NOT INITIAL.
+                  IF lw_lips-vrkme = 'KG'.
+                    CLEAR : lw_lfimg_mt.
+                    CALL FUNCTION 'UNIT_CONVERSION_SIMPLE'
+                      EXPORTING
+                        input                = lw_lips-lfimg
+                        unit_in              = 'KG'
+                        unit_out             = 'MT'
+                      IMPORTING
+                        output               = lw_lfimg_mt
+                      EXCEPTIONS
+                        conversion_not_found = 1
+                        division_by_zero     = 2
+                        input_invalid        = 3
+                        output_invalid       = 4
+                        overflow             = 5
+                        type_invalid         = 6
+                        units_missing        = 7
+                        unit_in_not_found    = 8
+                        unit_out_not_found   = 9
+                        OTHERS               = 10.
+                    IF sy-subrc EQ 0.
+                      lw_inv_value = lw_netwr . "/ lw_menge.
+*                      lw_inv_value = lw_inv_value * lw_lfimg_mt.       "Final Invoice Value
+                    ENDIF.
+                  ELSE.
+                    lw_inv_value = lw_frght . " / lw_menge.
+*                    lw_inv_value = lw_inv_value * lw_lips-lfimg.       "Final Invoice Value
+                  ENDIF.
+
+                ENDIF.
+                lw_cust_doc_data-invoice_amount_hdr = lw_inv_value.
+              ELSE.
+                lw_cust_doc_data-invoice_amount_hdr = lw_inv_value.
+              ENDIF.
+
+              READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_liqd_subtype shtype = lw_oigs-shtype.
+              IF sy-subrc = 0.
+                lw_cust_doc_data-subusiness_id = lw_zlog_exec_var-remarks.
+              ENDIF.
+
+              APPEND lw_cust_doc_data TO et_lib_cust_doc_data.
+              CLEAR : lw_index_i, lw_ekbe_t, lw_cust_doc_data, lw_menge, lw_frght, lw_netwr, lw_inv_value, lw_makt,lw_t001k.
+            ENDIF.
+          ENDIF.
+
+          "Logic to fetch a business & sub-business for RNM
+          READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_rnm_shtyp shtype = lw_oigs-shtype.
+          IF sy-subrc = 0.
+            READ TABLE lt_t001k INTO lw_t001k WITH KEY bwkey = lw_lips-werks BINARY SEARCH.
+            IF sy-subrc = 0.
+              READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_rnm_business ewb_uom_d = lw_t001k-bukrs.
+              IF sy-subrc = 0.
+                lw_cust_doc_data_td-business_id = lw_zlog_exec_var-remarks.
+                lw_cust_doc_data_td-subusiness_id = lw_zlog_exec_var-rfcdest.
+              ENDIF.
+            ENDIF.
+          ENDIF.
+        ENDIF.
+
+        READ TABLE lt_zlog_exec_var INTO lw_zlog_exec_var WITH KEY name = lc_liqd_subtype shtype = lw_oigs-shtype.
+        IF sy-subrc = 0.
+          lw_cust_doc_data_td-subusiness_id = lw_zlog_exec_var-remarks.
+        ENDIF.
+
+        APPEND lw_cust_doc_data_td TO et_lib_cust_doc_data.
+        CLEAR : lw_cust_doc_data_td, lw_lips, lw_mara, lw_oigsi, lw_ekko, lw_zlog_exec_var,lw_zlrpo,lw_yttstx0002,lw_t001k.
+      ENDLOOP.
+      CLEAR : lw_index, lw_oigsi, lw_oigsi_t.
+    ENDIF.
+
+    CLEAR lw_index.
+  ENDLOOP.
+
+ENDFUNCTION.
